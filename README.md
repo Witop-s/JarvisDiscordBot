@@ -1,2 +1,2 @@
-# MataneBot
+# MataneDiscordCGBot
  
