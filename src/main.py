@@ -2,17 +2,26 @@
 # https://discordpy.readthedocs.io/en/stable/quickstart.html#a-minimal-bot
 import asyncio
 import os
+from urllib.request import Request
+
 import feedparser
 import discord
 import html
 
 import requests
+from bs4 import BeautifulSoup
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
 
+@client.event
+async def get_html(url):
+    # Envoyez une requête HTTP GET pour obtenir le contenu de la page
+    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+    print(response.status_code)
+    return response.text
 
 @client.event
 async def check_films():
@@ -45,56 +54,42 @@ async def check_films():
             if description == "":
                 continue
 
-            message += "**" + film.title + "**"
+            contenu = await get_html(link)
+            soup = BeautifulSoup(contenu, 'html.parser')
+            #print(soup.prettify())
+
+            # Trouver l'élément img
+            # Utiliser un sélecteur CSS plus précis pour cibler l'élément img
+            img_element = soup.select_one('.attachment-cine-thumbthumb.wp-post-image')
+            image_url = img_element['src']
+            print(image_url)
+
+            print("image_url : " + image_url)
+
+            titre = "**" + film.title + "**"
+            listMessage.append(titre)
+            image = "\n" + image_url
+            listMessage.append(image)
             message += "\n" + "*" + description + "*"
-            message += "\n" + "||" + link + "||"
+            #message += "\n" + "||" + "[+](" + link + ")" + "||"
             listMessage.append(message)
 
         for message in listMessage:
-            # Si ce n'est pas le dernier message, on ajoute une ligne de séparation
-            if message != listMessage[-1]:
+            # Tous les 3 messages, et si le message n'est pas le dernier, on ajoute un saut de ligne
+            if listMessage.index(message)+1 % 3 == 0 and listMessage.index(message) != len(listMessage) - 1:
                 message += "\n\n" + html.unescape("\u200B")
             await channel.send(message)
 
-        await asyncio.sleep(3600)  # Attendre 1 heure (3600 secondes)
+        await asyncio.sleep(3600)  # Attendre 1 heure (3600 secondes)"""
 
-@client.event
-async def test_fb():
-    print("test fb")
-    app_id = '701046464836944'  # Remplacez par votre app_id
-    secret = '16c27e2c4ec50b8f008aa2e285dd6e9d'  # Remplacez par votre secret
-
-    page_name = 'cinemagaiete'  # Nom de la page Facebook que vous souhaitez récupérer. Ce nom est celui dans l'URL de la page et non le nom réel. Ex: https://www.facebook.com/LemonCake/
-
-    fb_token = app_id + '|' + secret  # On prépare le token en séparant app_id et secret par un |
-
-    # Via cette URL on va récupérer l'identifiant unique de la page pour récupérer les données
-    page_url = 'https://graph.facebook.com/' + page_name + '?fields=fan_count,talking_about_count,name&access_token=' + fb_token
-    page_response = requests.get(page_url)
-    page_data = page_response.json()
-
-    # Récupération de l'identifiant unique de la page
-    print(page_data)
-    page_id = page_data['id']
-
-    # Récupération du flux de la page
-    # Dans cette URL on peut voir que je demande de récupérer :
-    # - L'image du poste
-    # - Le message
-    # - La date de création
-    # - Les partages
-    # - Les likes et commentaires dont vous pouvez modifier la limite qui là est de 1
-    feed_url = f"https://graph.facebook.com/v18.0/{page_id}/feed?fields=picture,message,story,created_time,shares,likes.limit(1).summary(true),comments.limit(1).summary(true)&access_token={fb_token}"
-    feed_response = requests.get(feed_url)
-    feed_data = feed_response.json()
-    print(feed_data)
+        break
 
 
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     # client.loop.create_task(checkFilms())
-    await test_fb()
+    await check_films()
 
 
 @client.event
