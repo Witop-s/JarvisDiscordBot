@@ -10,6 +10,7 @@ import html
 
 import requests
 from bs4 import BeautifulSoup
+from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -81,11 +82,14 @@ async def check_films():
                 print("modif" + message)
             await channel.send(message)
 
+        role_cinephile = 1160395562022084652
+        role = discord.utils.get(channel.guild.roles, id=role_cinephile)
+        await channel.send(f"{role.mention} : Voici les films au cinéma cette semaine !")
+
         await asyncio.sleep(3600)  # Attendre 1 heure (3600 secondes)"""
 
         # TODO : Ajouter un système de cache pour ne pas envoyer les mêmes films plusieurs fois
         # TODO : Prendre la description via le web scraping
-        # TODO : Ajouter la mention @cinephile
         # TODO : Ajouter les horaires
         # TODO : Enlever ce break
         break
