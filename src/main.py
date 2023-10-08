@@ -31,6 +31,24 @@ async def get_html(url):
 
 
 @client.event
+async def add_day_reaction(message, jour):
+    if jour == "LUNDI":
+        await message.add_reaction("🇱")
+    elif jour == "MARDI":
+        await message.add_reaction("🇲")
+    elif jour == "MERCREDI":
+        await message.add_reaction("Ⓜ️")
+    elif jour == "JEUDI":
+        await message.add_reaction("🇯")
+    elif jour == "VENDREDI":
+        await message.add_reaction("🇻")
+    elif jour == "SAMEDI":
+        await message.add_reaction("🇸")
+    elif jour == "DIMANCHE":
+        await message.add_reaction("🇩")
+
+
+@client.event
 async def check_films():
     while True:
         # Code à exécuter toutes les heures
@@ -46,6 +64,7 @@ async def check_films():
 
         # Récuperer le channel
         channel = client.get_channel(id_salon_film)
+        list_reaction_jour = []
 
         for film in films:
             message = ""
@@ -63,7 +82,7 @@ async def check_films():
 
             contenu = await get_html(link)
             soup = BeautifulSoup(contenu, 'html.parser')
-            #print(soup.prettify())
+            # print(soup.prettify())
 
             # Trouver l'élément img
             # Utiliser un sélecteur CSS plus précis pour cibler l'élément img
@@ -107,6 +126,7 @@ async def check_films():
 
                 jours_semaine = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"]
                 representations_element = representations_element.find_next_sibling("p")
+                representations_jours = []
 
                 while any(jour in representations_element.text.strip() for jour in jours_semaine):
                     # Prendre seulement la première ligne
@@ -114,9 +134,17 @@ async def check_films():
                     heures = representations_element.text.strip().split("\n")[1]
                     representations += jours.title() + " - " + heures + "\n"
 
+                    # Séparer les jours et les ajouter à la liste
+                    jours = jours.split(" ")
+                    for jour in jours:
+                        if jour in jours_semaine:
+                            representations_jours.append(jour)
+
                     representations_element = representations_element.find_next_sibling("p")
 
                 print(representations)
+                # Ajouter les réactions
+                list_reaction_jour.append(representations_jours)
 
             synopsis_element = soup.select_one('strong:-soup-contains("Synopsis :")')
             synopsis = synopsis_element.find_next_sibling("p").text.strip()
@@ -128,11 +156,17 @@ async def check_films():
             # Tous les 3 messages, et si le message n'est pas le dernier, on ajoute un saut de ligne et une réaction
             is_end_film = (listMessage.index(message) + 1) % 3 == 0
             if is_end_film and listMessage.index(message) != len(listMessage) - 1:
-                #message += "\n" + html.unescape("\u200B")
+                # message += "\n" + html.unescape("\u200B")
                 print()
             sent_message = await channel.send(message)
             if is_end_film:
                 await sent_message.add_reaction("✋")
+                try:
+                    list_jour = list_reaction_jour.pop(0)
+                    for jour in list_jour:
+                        await add_day_reaction(sent_message, jour)
+                except IndexError:
+                    pass
 
         role = discord.utils.get(channel.guild.roles, id=role_cinephile)
         last_message = f"{role.mention} \nDe nouveaux films sont disponibles !"
@@ -147,6 +181,7 @@ async def check_films():
         # TODO : Enlever ce break
         break
 
+
 @client.event
 async def on_raw_reaction_add(payload):
     print("on_raw_reaction_add")
@@ -159,6 +194,7 @@ async def on_raw_reaction_add(payload):
             user = payload.member
             role = discord.utils.get(user.guild.roles, id=role_cinephile)
             await user.add_roles(role)
+
 
 @client.event
 async def on_raw_reaction_remove(payload):
