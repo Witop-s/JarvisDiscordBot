@@ -66,7 +66,7 @@ async def check_films():
 
             print("image_url : " + image_url)
 
-            titre = "**" + film.title + "**"
+            titre = "**" + film.title.upper() + "**"
             listMessage.append(titre)
             image = "\n" + image_url
             listMessage.append(image)
@@ -76,12 +76,17 @@ async def check_films():
 
         for message in listMessage:
             # Tous les 3 messages, et si le message n'est pas le dernier, on ajoute un saut de ligne
-            if listMessage.index(message)+1 % 3 == 0 and listMessage.index(message) != len(listMessage) - 1:
-                message += "\n\n" + html.unescape("\u200B")
+            if (listMessage.index(message)+1) % 3 == 0 and listMessage.index(message) != len(listMessage) - 1:
+                message += "\n" + html.unescape("\u200B")
+                print("modif" + message)
             await channel.send(message)
 
         await asyncio.sleep(3600)  # Attendre 1 heure (3600 secondes)"""
 
+        # TODO : Ajouter un système de cache pour ne pas envoyer les mêmes films plusieurs fois
+        # TODO : Prendre la description via le web scraping
+        # TODO : Ajouter la mention @cinephile
+        # TODO : Enlever ce break
         break
 
 
