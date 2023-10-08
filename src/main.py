@@ -86,6 +86,7 @@ async def check_films():
         # TODO : Ajouter un système de cache pour ne pas envoyer les mêmes films plusieurs fois
         # TODO : Prendre la description via le web scraping
         # TODO : Ajouter la mention @cinephile
+        # TODO : Ajouter les horaires
         # TODO : Enlever ce break
         break
 
