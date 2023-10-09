@@ -21,7 +21,7 @@ intents.members = True
 
 client = discord.Client(intents=intents)
 
-id_salon_film = 1159950676521123890
+id_salon_film = 1154611673844416552
 role_cinephile = 1160395562022084652
 
 reponse_jarvis = ""
@@ -301,8 +301,9 @@ async def on_message(message):
         await message.channel.send('Hello!')
 
     if "jarvis" in message.content.lower():
-        await trigger_jarvis(message)
-        #await message.channel.send('Oui ?')
+        # bot is typing effect
+        async with message.channel.typing():
+            await trigger_jarvis(message)
 
 
 try:
