@@ -10,7 +10,7 @@ import discord
 import html
 
 import requests
-import schedule
+from apscheduler.schedulers.background import BackgroundScheduler
 import time
 from bs4 import BeautifulSoup
 from discord.ext import commands
@@ -213,8 +213,10 @@ async def on_raw_reaction_remove(payload):
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     #await check_films()
-    # schedule pour exécuter la fonction check_films tous les jeudi à 18h
-    schedule.every().thursday.at("12:00").do(check_films)
+    # schedule pour exécuter la fonction check_films tous les jeudi à 12h
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_films, 'cron', day_of_week='thu', hour=12)
+    scheduler.start()
 
 @client.event
 async def on_failure(urlrequest, reponse_content):
