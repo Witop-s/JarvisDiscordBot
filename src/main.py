@@ -238,7 +238,10 @@ async def messages_formater(messages):
     messages.reverse()
     messages_formated = []
     # [{"role": "user", "content": prompt}]
-    messages_formated.append({"role": "system", "content": "Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas besoin d'écrire ton nom."})
+    system_prompt = ("Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que "
+                     "leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas "
+                     "besoin d'écrire ton nom.")
+    messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
         # Séparer le nom du message
         utilisateur = message.split(" - ")[0]
