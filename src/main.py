@@ -27,13 +27,14 @@ role_cinephile = 1160395562022084652
 reponse_jarvis = ""
 
 openai_token = ""
-try :
+try:
     openai_token = os.getenv("OPENAI") or ""
     if openai_token == "":
         raise Exception("No openai token found")
 except Exception as e:
     print(e)
     exit(1)
+
 
 @client.event
 async def get_html(url):
@@ -69,7 +70,7 @@ async def check_films():
     feed = feedparser.parse(url)
     films = feed.entries
 
-    listMessage = []
+    list_message = []
 
     # Récuperer le channel
     channel = client.get_channel(id_salon_film)
@@ -102,9 +103,9 @@ async def check_films():
         print("image_url : " + image_url)
 
         titre = "**" + film.title.upper() + "**"
-        listMessage.append(titre)
+        list_message.append(titre)
         image = "\n" + image_url
-        listMessage.append(image)
+        list_message.append(image)
         # message += "\n" + "*" + description + "*"
         # message += "\n" + "||" + "[+](" + link + ")" + "||"
         # listMessage.append(message)
@@ -131,7 +132,8 @@ async def check_films():
 
             # Trouver l'élément avec les représentations
             representations_element = soup.select_one('strong:-soup-contains("Représentation :")')
-            # Tant que l'élément suivant contient un jour de la semaine, on ajoute le texte à la variable representations
+            # Tant que l'élément suivant contient un jour de la semaine, on ajoute le texte à la variable
+            # representations
 
             jours_semaine = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"]
             representations_element = representations_element.find_next_sibling("p")
@@ -159,12 +161,12 @@ async def check_films():
         synopsis = synopsis_element.find_next_sibling("p").text.strip()
         print(synopsis)
         representations += "\n" + "*" + synopsis + "*"
-        listMessage.append(representations)
+        list_message.append(representations)
 
-    for message in listMessage:
+    for message in list_message:
         # Tous les 3 messages, et si le message n'est pas le dernier, on ajoute un saut de ligne et une réaction
-        is_end_film = (listMessage.index(message) + 1) % 3 == 0
-        if is_end_film and listMessage.index(message) != len(listMessage) - 1:
+        is_end_film = (list_message.index(message) + 1) % 3 == 0
+        if is_end_film and list_message.index(message) != len(list_message) - 1:
             # message += "\n" + html.unescape("\u200B")
             print()
         sent_message = await channel.send(message)
@@ -212,17 +214,19 @@ async def on_raw_reaction_remove(payload):
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
-    #await check_films()
+    # await check_films()
     # schedule pour exécuter la fonction check_films tous les jeudi à 12h
     scheduler = BackgroundScheduler()
     scheduler.add_job(check_films, 'cron', day_of_week='thu', hour=12)
     scheduler.start()
+
 
 @client.event
 async def on_failure(urlrequest, reponse_content):
     print("on_failure")
     print(urlrequest)
     print(reponse_content)
+
 
 @client.event
 async def on_success(urlrequest, reponse_content, origine):
@@ -253,6 +257,7 @@ async def messages_formater(messages):
 
     return messages_formated
 
+
 @client.event
 async def get_completion(messages, temperature=0.8, origine=None):
     messages = await messages_formater(messages)
@@ -276,13 +281,13 @@ async def get_completion(messages, temperature=0.8, origine=None):
     # chercher le message via ["choices"][0]["message"]["content"]
     reponse_content = response.json()["choices"][0]["message"]["content"]
 
-
     if response.status_code == 200:
         # La requête a réussi
         await on_success(response, reponse_content, origine)
     else:
         # Gérer les échecs ou les erreurs
         await on_failure(response, reponse_content)
+
 
 @client.event
 async def trigger_jarvis(message):
@@ -320,8 +325,8 @@ except discord.HTTPException as e:
             "The Discord servers denied the connection for making too many requests"
         )
         print(
-            "Get help from https://stackoverflow.com/questions/66724687/in-discord-py-how-to-solve-the-error-for-toomanyrequests"
+            "Get help from https://stackoverflow.com/questions/66724687/in-discord-py-how-to-solve-the-error-for"
+            "-toomanyrequests"
         )
     else:
         raise e
-
