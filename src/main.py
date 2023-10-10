@@ -507,7 +507,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith("/kill"):
+    if message.content.startswith("/kill") and message.author.guild_permissions.administrator:
         exit(0)
 
     elif "jarvis" in message.content.lower():
