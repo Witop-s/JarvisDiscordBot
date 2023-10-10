@@ -26,6 +26,7 @@ id_salon_rules = 1154616431921606678
 id_salon_roles = 1159946572621152387
 id_salon_bienvenue = 1152496108195565621
 id_salon_suggestion = 1161189328437907576
+id_salon_achievements = 1161419571874517102
 
 role_cinephile = 1160395562022084652
 role_rules_temp = 1161174933322342471
@@ -250,7 +251,14 @@ async def on_raw_reaction_add(payload):
         # Si l'utilisateur à déjà le rôle temp
         if discord.utils.get(user.guild.roles, id=role_rules_temp) in user.roles:
             role_1984 = discord.utils.get(user.guild.roles, id=id_1984)
+            already_found = False
+            for member in user.guild.members:
+                if discord.utils.get(member.roles, id=id_1984) is not None:
+                    already_found = True
             await user.add_roles(role_1984)
+            if not already_found:
+                channel = client.get_channel(id_salon_achievements)
+                await channel.send(f"L'achievement {role_1984.mention} a été découvert par {user.mention} !")
 
     elif payload.channel_id == id_salon_roles and payload.emoji.name == "💚":
         user = payload.member
@@ -485,7 +493,14 @@ async def get_completion(messages, temperature=0.8, origine=None):
         await on_success(response, reponse_content, origine)
         if ("Tout de suite Mr.Stark !" in reponse_content):
             role = discord.utils.get(origine.guild.roles, id=jarvis_ach)
+            already_found = False
+            for member in origine.guild.members:
+                if discord.utils.get(member.roles, id=jarvis_ach) is not None:
+                    already_found = True
             await origine.author.add_roles(role)
+            if not already_found:
+                channel = client.get_channel(id_salon_achievements)
+                await channel.send(f"L'achievement {role.mention} a été découvert par {origine.author.mention} !")
     else:
         # Gérer les échecs ou les erreurs
         await on_failure(response, reponse_content)
@@ -583,13 +598,32 @@ async def on_message(message):
 
     # Si le message a été envoyé entre 2h et 5h du matin
     elif 2 <= time.localtime().tm_hour <= 5:
+        # On regarde parmis tous les membres du serveur si quelqu'un a l'achievement "early bird", si personne ne l'a
+        # alors on écrit un message dans le channel des achievements
+        already_found = False
+        for member in message.guild.members:
+            if discord.utils.get(member.roles, id=night_owl_id) is not None:
+                already_found = True
         # Ajouter l'achievement "night owl"
         await message.author.add_roles(message.guild.get_role(night_owl_id))
+        if not already_found:
+            channel = client.get_channel(id_salon_achievements)
+            role_night_owl = discord.utils.get(message.guild.roles, id=night_owl_id)
+            await channel.send(f"L'achievement {role_night_owl.mention} a été découvert par {message.author.mention} !")
+
 
     # Si le message a été envoyé entre 5h et 8h du matin
     elif 5 <= time.localtime().tm_hour <= 8:
+        already_found = False
+        for member in message.guild.members:
+            if discord.utils.get(member.roles, id=early_bird_id) is not None:
+                already_found = True
         # Ajouter l'achievement "early bird"
         await message.author.add_roles(message.guild.get_role(early_bird_id))
+        if not already_found:
+            channel = client.get_channel(id_salon_achievements)
+            role_early_bird = discord.utils.get(message.guild.roles, id=early_bird_id)
+            await channel.send(f"L'achievement {role_early_bird.mention} a été découvert par {message.author.mention} !")
 
 
 try:
