@@ -467,10 +467,12 @@ async def on_message(message):
         message_to_react = await channel.fetch_message(message_id)
         # Récuperer la ou les réactions qui se situe après la mention du channel
         reactions = []
-        for reaction in message.split(channel.mention)[1].split(" "):
+        # Split pour chaque character
+        for reaction in message.split(channel.mention)[1].split(","):
             reactions.append(reaction.strip())
         for reaction in reactions:
             # Ajouter la réaction
+            print(reaction)
             await message_to_react.add_reaction(reaction)
 
     elif message.content.startswith("/unreaction") and message.author.guild_permissions.administrator:
