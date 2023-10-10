@@ -507,7 +507,10 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if "jarvis" in message.content.lower():
+    if message.content.startswith("/kill"):
+        exit(0)
+
+    elif "jarvis" in message.content.lower():
         # bot is typing effect
         async with message.channel.typing():
             await trigger_jarvis(message)
