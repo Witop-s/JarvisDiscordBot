@@ -293,10 +293,36 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=role_rules_temp)
             await user.add_roles(role)
 
-    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💻":
-        role = discord.utils.get(user.guild.roles, id=informatique)
-        await user.remove_roles(role)
+    elif (payload.channel_id == id_salon_roles):
+        role = ""
+        if payload.emoji.name == "💻":
+            role = discord.utils.get(user.guild.roles, id=informatique)
+        elif payload.emoji.name == "📁":
+            role = discord.utils.get(user.guild.roles, id=multimedia)
+        elif payload.emoji.name == "📷":
+            role = discord.utils.get(user.guild.roles, id=photographie)
+        elif payload.emoji.name == "🌐":
+            role = discord.utils.get(user.guild.roles, id=A3SI)
+        elif payload.emoji.name == "⚡":
+            role = discord.utils.get(user.guild.roles, id=TGEAC)
+        elif payload.emoji.name == "💟":
+            role = discord.utils.get(user.guild.roles, id=soins_infirmier)
+        elif payload.emoji.name == "🦷":
+            role = discord.utils.get(user.guild.roles, id=hygiene_dentaire)
+        elif payload.emoji.name == "✈️":
+            role = discord.utils.get(user.guild.roles, id=tourisme)
+        elif payload.emoji.name == "🌆":
+            role = discord.utils.get(user.guild.roles, id=urbanisme)
+        elif payload.emoji.name == "📚":
+            role = discord.utils.get(user.guild.roles, id=arts_lettres)
+        elif payload.emoji.name == "🧬":
+            role = discord.utils.get(user.guild.roles, id=sciences_humaines)
+        elif payload.emoji.name == "🌿":
+            role = discord.utils.get(user.guild.roles, id=sciences_nature)
+        elif payload.emoji.name == "🎓":
+            role = discord.utils.get(user.guild.roles, id=tremplin_DEC)
 
+        await user.remove_roles(role)
 
 
 @client.event
