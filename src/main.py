@@ -339,6 +339,62 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=res_ext)
         await user.remove_roles(role)
 
+    elif payload.channel_id == id_salon_roles:
+        # Add formation
+            elif payload.emoji.name == "💻":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=informatique)
+            elif payload.emoji.name == "📁":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=multimedia)
+            elif payload.emoji.name == "📷":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=photographie)
+            elif payload.emoji.name == "🌐":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=A3SI)
+            elif payload.emoji.name == "⚡":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=TGEAC)
+            elif payload.emoji.name == "💟":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=soins_infirmier)
+            elif payload.emoji.name == "🦷":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=hygiene_dentaire)
+            elif payload.emoji.name == "✈️":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=tourisme)
+            elif payload.emoji.name == "🌆":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=urbanisme)
+            elif payload.emoji.name == "📚":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=arts_lettres)
+            elif payload.emoji.name == "🧬":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=sciences_humaines)
+            elif payload.emoji.name == "🌿":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=sciences_nature)
+            elif payload.emoji.name == "🎓":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=tremplin_DEC)
+            # Localisation
+            elif payload.emoji.name == "2️⃣":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=res2e)
+            elif payload.emoji.name == "3️⃣":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=res3e)
+            elif payload.emoji.name == "4️⃣":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=res4e)
+            elif payload.emoji.name == "🇪":
+                user = payload.member
+                role = discord.utils.get(user.guild.roles, id=res_ext)
+            await user.add_roles(role)
+
 
 @client.event
 async def on_member_join(member):
