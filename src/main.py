@@ -22,7 +22,28 @@ intents.members = True
 client = discord.Client(intents=intents)
 
 id_salon_film = 1154611673844416552
+id_salon_rules = 1154616431921606678
+id_salon_roles = 1159946572621152387
+id_salon_bienvenue = 1152496108195565621
+id_salon_suggestion = 1161189328437907576
+
 role_cinephile = 1160395562022084652
+role_rules_temp = 1161174933322342471
+
+dino_bot_id = 155149108183695360
+
+# ------------------------ #
+#           Rôles          #
+# ------------------------ #
+student = 1157893831069540412
+non_student = 1157895368097411113
+
+# ------------------------ #
+#       Achievements       #
+# ------------------------ #
+early_bird_id = 1161104309266681877
+night_owl_id = 1161104505631416360
+id_1984 = 1161323579611291669
 
 reponse_jarvis = ""
 
@@ -191,24 +212,91 @@ async def check_films():
 async def on_raw_reaction_add(payload):
     print("on_raw_reaction_add")
     # Vérifiez si la réaction a été ajoutée dans le salon spécifique
-    if payload.channel_id == id_salon_film:
-        if payload.member.bot:
-            return  # Ignorer les réactions du bot
-        if payload.emoji.name == "🔔":
-            user = payload.member
-            role = discord.utils.get(user.guild.roles, id=role_cinephile)
-            await user.add_roles(role)
+    if payload.member.bot:
+        return  # Ignorer les réactions du bot
+
+    if payload.channel_id == id_salon_film and payload.emoji.name == "🔔":
+        user = payload.member
+        role = discord.utils.get(user.guild.roles, id=role_cinephile)
+        await user.add_roles(role)
+
+    elif payload.channel_id == id_salon_rules and payload.emoji.name == "✅":
+        user = payload.member
+        role = discord.utils.get(user.guild.roles, id=role_rules_temp)
+        await user.add_roles(role)
+        # Si l'utilisateur à déjà le rôle temp
+        if discord.utils.get(user.guild.roles, id=role_rules_temp) in user.roles:
+            role_1984 = discord.utils.get(user.guild.roles, id=id_1984)
+            await user.add_roles(role_1984)
+
+
+    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💚":
+        user = payload.member
+        role = discord.utils.get(user.guild.roles, id=student)
+        await user.add_roles(role)
+        # Enlever le rôle temporaire
+        role = discord.utils.get(user.guild.roles, id=role_rules_temp)
+        await user.remove_roles(role)
+
+    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💙":
+        user = payload.member
+        role = discord.utils.get(user.guild.roles, id=non_student)
+        await user.add_roles(role)
+        # Enlever le rôle temporaire
+        role = discord.utils.get(user.guild.roles, id=role_rules_temp)
+        await user.remove_roles(role)
+
 
 
 @client.event
 async def on_raw_reaction_remove(payload):
     print("on_raw_reaction_remove")
+
+    guild = client.get_guild(payload.guild_id)
+    user = guild.get_member(payload.user_id)
     # Vérifiez si la réaction a été ajoutée dans le salon spécifique
     if payload.channel_id == id_salon_film and payload.emoji.name == "🔔":
-        guild = client.get_guild(payload.guild_id)
-        user = guild.get_member(payload.user_id)
         role = discord.utils.get(user.guild.roles, id=role_cinephile)
         await user.remove_roles(role)
+
+    if payload.channel_id == id_salon_roles and payload.emoji.name == "💚":
+        role = discord.utils.get(user.guild.roles, id=student)
+        await user.remove_roles(role)
+        # Si l'utilisateur n'a pas le rôle non étudiant, on lui ajoute le rôle temporaire
+        if not discord.utils.get(user.guild.roles, id=non_student) in user.roles:
+            role = discord.utils.get(user.guild.roles, id=role_rules_temp)
+            await user.add_roles(role)
+
+    if payload.channel_id == id_salon_roles and payload.emoji.name == "💙":
+        role = discord.utils.get(user.guild.roles, id=non_student)
+        await user.remove_roles(role)
+        # Si l'utilisateur n'a pas le rôle étudiant, on lui ajoute le rôle temporaire
+        if not discord.utils.get(user.guild.roles, id=student) in user.roles:
+            role = discord.utils.get(user.guild.roles, id=role_rules_temp)
+            await user.add_roles(role)
+
+
+@client.event
+async def on_member_join(member):
+    print("on_member_join")
+    # Récuperer le channel
+    channel = client.get_channel(id_salon_bienvenue)
+    channel_rules = client.get_channel(id_salon_rules)
+    channel_suggestion = client.get_channel(id_salon_suggestion)
+
+    old_message = f"Salut {member.mention}, bienvenue sur le serveur !"
+    old_message += "\n" + (
+                f"Pour commencer, je t'invite à lire les règles du serveur dans le salon {channel_rules.mention}"
+                f", promis ça sera pas long ! :wink:" + "\n" + "Ensuite, tu pourras récupérer un rôle et accéder "
+                                                               "aux autres salons :tada: !")
+
+    new_message = f"Salut {member.mention}, bienvenue sur le serveur !"
+    new_message += "\n" + (f"Je me présente : Jarvis, je suis le bot custom du serveur, je n'ai pas encore beaucoup "
+                           "de fonctionnalités mais je suis encore en développement ! Donc si tu as des idées, "
+                           f"n'hésite pas à les partager {channel_suggestion.mention} ! En attendant, je t'invite à "
+                           f"suivre les instructions laissé par {member.guild.get_member(dino_bot_id).mention}")
+
+    await channel.send(new_message)
 
 
 @client.event
@@ -305,13 +393,54 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith('$hello'):
-        await message.channel.send('Hello!')
-
     if "jarvis" in message.content.lower():
         # bot is typing effect
         async with message.channel.typing():
             await trigger_jarvis(message)
+
+    # Si le message est check_films() et que l'auteur est un admin
+    elif message.content == "/check_films" and message.author.guild_permissions.administrator:
+        await check_films()
+
+    # Si le message est /ping je réponds pong
+    elif message.content == "/ping":
+        await message.channel.send("pong " + str(round(client.latency, 2)) + "ms")
+
+    # Si le message commence par /send et que l'auteur est un admin
+    elif message.content.startswith("/send") and message.author.guild_permissions.administrator:
+        # Récuperer le message à envoyer
+        message_to_send = message.content.split("/send ")[1]
+        # Récuperer le dernier channel mentionné dans le message
+        channel = message.channel_mentions[len(message.channel_mentions) - 1]
+        # Supprimer seulement la dernière mention
+        message_to_send = message_to_send.replace(channel.mention, "")
+        # Envoyer le message
+        await channel.send(message_to_send)
+
+    elif message.content.startswith("/reaction") and message.author.guild_permissions.administrator:
+        # Récuperer le channel du message a réagir
+        channel = message.channel_mentions[len(message.channel_mentions) - 1]
+        # Récuperer le message a réagir
+        message = message.content.split("/reaction ")[1]
+        # Prendre seulement l'id du message (en première position)
+        message_id = message.split(" ")[0]
+        # Récuperer le message
+        message_to_react = await channel.fetch_message(message_id)
+        # Récuperer la réaction qui se situe après la mention du channel
+        reaction = message.split(channel.mention)[1]
+        reaction = reaction.strip()
+        # Ajouter la réaction
+        await message_to_react.add_reaction(reaction)
+
+    # Si le message a été envoyé entre 2h et 5h du matin
+    elif 2 <= time.localtime().tm_hour <= 5:
+        # Ajouter l'achievement "night owl"
+        await message.author.add_roles(message.guild.get_role(night_owl_id))
+
+    # Si le message a été envoyé entre 5h et 8h du matin
+    elif 5 <= time.localtime().tm_hour <= 8:
+        # Ajouter l'achievement "early bird"
+        await message.author.add_roles(message.guild.get_role(early_bird_id))
 
 
 try:
