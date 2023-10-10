@@ -37,6 +37,21 @@ dino_bot_id = 155149108183695360
 # ------------------------ #
 student = 1157893831069540412
 non_student = 1157895368097411113
+informatique = 1159935720899739718
+multimedia = 1159935583678894220
+photographie = 1159935685713727610
+A3SI = 1159934658327363696
+TGEAC = 1159936385491423242
+soins_infirmier = 1159935299066023976
+hygiene_dentaire = 1159935932821155860
+tourisme = 1159935898360758412
+urbanisme = 1159936010868760717
+arts_lettres = 1159936438763261962
+sciences_humaines = 1159936718468829204
+sciences_nature = 1159936811204882623
+tremplin_DEC = 1159959072666308669
+
+
 
 # ------------------------ #
 #       Achievements       #
@@ -275,6 +290,9 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=role_rules_temp)
             await user.add_roles(role)
 
+    #if payload.channel_id == id_salon_roles and payload.emoji.name == "💻":
+
+
 
 @client.event
 async def on_member_join(member):
@@ -416,6 +434,22 @@ async def on_message(message):
         message_to_send = message_to_send.replace(channel.mention, "")
         # Envoyer le message
         await channel.send(message_to_send)
+
+    elif message.content.startswith("/edit") and message.author.guild_permissions.administrator:
+        # Récuperer le message à envoyer
+        message_to_send = message.content.split("/edit ")[1]
+        # Récuperer le dernier channel mentionné dans le message
+        channel = message.channel_mentions[len(message.channel_mentions) - 1]
+        # Supprimer seulement la dernière mention
+        message_to_send = message_to_send.replace(channel.mention, "")
+        # Récuperer le message a éditer
+        message_id = message_to_send.split("\n")[0]
+        # Récuperer le message
+        message_to_edit = await channel.fetch_message(message_id)
+        # Supprimer l'id du message
+        message_to_send = message_to_send.replace(message_id, "")
+        # Editer le message
+        await message_to_edit.edit(content=message_to_send)
 
     elif message.content.startswith("/reaction") and message.author.guild_permissions.administrator:
         # Récuperer le channel du message a réagir
