@@ -244,7 +244,6 @@ async def on_raw_reaction_add(payload):
             role_1984 = discord.utils.get(user.guild.roles, id=id_1984)
             await user.add_roles(role_1984)
 
-
     elif payload.channel_id == id_salon_roles and payload.emoji.name == "💚":
         user = payload.member
         role = discord.utils.get(user.guild.roles, id=student)
@@ -261,6 +260,10 @@ async def on_raw_reaction_add(payload):
         role = discord.utils.get(user.guild.roles, id=role_rules_temp)
         await user.remove_roles(role)
 
+    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💻":
+        user = payload.member
+        role = discord.utils.get(user.guild.roles, id=informatique)
+        await user.add_roles(role)
 
 
 @client.event
@@ -274,7 +277,7 @@ async def on_raw_reaction_remove(payload):
         role = discord.utils.get(user.guild.roles, id=role_cinephile)
         await user.remove_roles(role)
 
-    if payload.channel_id == id_salon_roles and payload.emoji.name == "💚":
+    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💚":
         role = discord.utils.get(user.guild.roles, id=student)
         await user.remove_roles(role)
         # Si l'utilisateur n'a pas le rôle non étudiant, on lui ajoute le rôle temporaire
@@ -282,7 +285,7 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=role_rules_temp)
             await user.add_roles(role)
 
-    if payload.channel_id == id_salon_roles and payload.emoji.name == "💙":
+    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💙":
         role = discord.utils.get(user.guild.roles, id=non_student)
         await user.remove_roles(role)
         # Si l'utilisateur n'a pas le rôle étudiant, on lui ajoute le rôle temporaire
@@ -290,7 +293,9 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=role_rules_temp)
             await user.add_roles(role)
 
-    #if payload.channel_id == id_salon_roles and payload.emoji.name == "💻":
+    elif payload.channel_id == id_salon_roles and payload.emoji.name == "💻":
+        role = discord.utils.get(user.guild.roles, id=informatique)
+        await user.remove_roles(role)
 
 
 
@@ -460,11 +465,26 @@ async def on_message(message):
         message_id = message.split(" ")[0]
         # Récuperer le message
         message_to_react = await channel.fetch_message(message_id)
-        # Récuperer la réaction qui se situe après la mention du channel
-        reaction = message.split(channel.mention)[1]
-        reaction = reaction.strip()
-        # Ajouter la réaction
-        await message_to_react.add_reaction(reaction)
+        # Récuperer la ou les réactions qui se situe après la mention du channel
+        reactions = []
+        for reaction in message.split(channel.mention)[1].split(" "):
+            reactions.append(reaction.strip())
+        for reaction in reactions:
+            # Ajouter la réaction
+            await message_to_react.add_reaction(reaction)
+
+    elif message.content.startswith("/unreaction") and message.author.guild_permissions.administrator:
+        # Récuperer le channel du message a réagir
+        channel = message.channel_mentions[len(message.channel_mentions) - 1]
+        # Récuperer le message a réagir
+        message = message.content.split("/unreaction ")[1]
+        # Prendre seulement l'id du message (en première position)
+        message_id = message.split(" ")[0]
+        # Récuperer le message
+        message_to_unreact = await channel.fetch_message(message_id)
+        # Enlever toute les réactions
+        await message_to_unreact.clear_reactions()
+
 
     # Si le message a été envoyé entre 2h et 5h du matin
     elif 2 <= time.localtime().tm_hour <= 5:
