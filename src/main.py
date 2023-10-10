@@ -51,6 +51,11 @@ sciences_humaines = 1159936718468829204
 sciences_nature = 1159936811204882623
 tremplin_DEC = 1159959072666308669
 
+res2e = 1155648742494584832
+res3e = 1157894789656748032
+res4e = 1157895123942768670
+res_ext = 1157895212543266836
+
 
 
 # ------------------------ #
@@ -293,8 +298,10 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=role_rules_temp)
             await user.add_roles(role)
 
+    # Roles Formation + Localisation
     elif (payload.channel_id == id_salon_roles):
         role = ""
+        # Formation
         if payload.emoji.name == "💻":
             role = discord.utils.get(user.guild.roles, id=informatique)
         elif payload.emoji.name == "📁":
@@ -321,7 +328,15 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=sciences_nature)
         elif payload.emoji.name == "🎓":
             role = discord.utils.get(user.guild.roles, id=tremplin_DEC)
-
+        # Localisation
+        elif payload.emoji.name == "2️⃣":
+            role = discord.utils.get(user.guild.roles, id=res2e)
+        elif payload.emoji.name == "3️⃣":
+            role = discord.utils.get(user.guild.roles, id=res3e)
+        elif payload.emoji.name == "4️⃣":
+            role = discord.utils.get(user.guild.roles, id=res4e)
+        elif payload.emoji.name == "🇪":
+            role = discord.utils.get(user.guild.roles, id=res_ext)
         await user.remove_roles(role)
 
 
