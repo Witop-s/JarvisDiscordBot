@@ -57,6 +57,9 @@ res3e = 1157894789656748032
 res4e = 1157895123942768670
 res_ext = 1157895212543266836
 
+LGBT = 1159966676285141012
+Soutien_LGBT = 1161411225037570129
+
 role_achievements = 1161418291613552650
 
 
@@ -319,6 +322,10 @@ async def on_raw_reaction_add(payload):
             role = discord.utils.get(user.guild.roles, id=res4e)
         elif payload.emoji.name == "🇪":
             role = discord.utils.get(user.guild.roles, id=res_ext)
+        elif payload.emoji.name == "🏳️‍🌈":
+            role = discord.utils.get(user.guild.roles, id=LGBT)
+        elif payload.emoji.name == "🌈":
+            role = discord.utils.get(user.guild.roles, id=Soutien_LGBT)
         await user.add_roles(role)
 
 
@@ -388,6 +395,10 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=res4e)
         elif payload.emoji.name == "🇪":
             role = discord.utils.get(user.guild.roles, id=res_ext)
+        elif payload.emoji.name == "🏳️‍🌈":
+            role = discord.utils.get(user.guild.roles, id=LGBT)
+        elif payload.emoji.name == "🌈":
+            role = discord.utils.get(user.guild.roles, id=Soutien_LGBT)
         await user.remove_roles(role)
 
 
