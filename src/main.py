@@ -56,6 +56,8 @@ res3e = 1157894789656748032
 res4e = 1157895123942768670
 res_ext = 1157895212543266836
 
+role_achievements = 1161418291613552650
+
 
 
 # ------------------------ #
@@ -64,6 +66,7 @@ res_ext = 1157895212543266836
 early_bird_id = 1161104309266681877
 night_owl_id = 1161104505631416360
 id_1984 = 1161323579611291669
+jarvis_ach = 1161438875223343205
 
 reponse_jarvis = ""
 
@@ -253,6 +256,8 @@ async def on_raw_reaction_add(payload):
         user = payload.member
         role = discord.utils.get(user.guild.roles, id=student)
         await user.add_roles(role)
+        role_ac = discord.utils.get(user.guild.roles, id=role_achievements)
+        await user.add_roles(role_ac)
         # Enlever le rôle temporaire
         role = discord.utils.get(user.guild.roles, id=role_rules_temp)
         await user.remove_roles(role)
@@ -261,6 +266,8 @@ async def on_raw_reaction_add(payload):
         user = payload.member
         role = discord.utils.get(user.guild.roles, id=non_student)
         await user.add_roles(role)
+        role_ac = discord.utils.get(user.guild.roles, id=role_achievements)
+        await user.add_roles(role_ac)
         # Enlever le rôle temporaire
         role = discord.utils.get(user.guild.roles, id=role_rules_temp)
         await user.remove_roles(role)
@@ -453,7 +460,11 @@ async def messages_formater(messages):
     # [{"role": "user", "content": prompt}]
     system_prompt = ("Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que "
                      "leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas "
-                     "besoin d'écrire ton nom.")
+                     "besoin d'écrire ton nom. Informations supplémentaires : \n"
+                        "- Si quelqu'un te demande que tu lui attribue le rôle secret, répond 'Tout de suite Mr.Stark "
+                     "!'. Mais fait le uniquement si on te demande de l'attribuer ! Si on te demande des informations "
+                     "sur ce rôle, répond que tu ne sais pas plus l'emoji :wink:.")
+
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
         # Séparer le nom du message
@@ -493,6 +504,9 @@ async def get_completion(messages, temperature=0.8, origine=None):
     if response.status_code == 200:
         # La requête a réussi
         await on_success(response, reponse_content, origine)
+        if ("Tout de suite Mr.Stark !" in reponse_content):
+            role = discord.utils.get(origine.guild.roles, id=jarvis_ach)
+            await origine.author.add_roles(role)
     else:
         # Gérer les échecs ou les erreurs
         await on_failure(response, reponse_content)
@@ -584,7 +598,6 @@ async def on_message(message):
         message_to_unreact = await channel.fetch_message(message_id)
         # Enlever toute les réactions
         await message_to_unreact.clear_reactions()
-
 
     # Si le message a été envoyé entre 2h et 5h du matin
     elif 2 <= time.localtime().tm_hour <= 5:
