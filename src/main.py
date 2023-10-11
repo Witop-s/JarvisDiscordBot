@@ -27,6 +27,7 @@ id_salon_roles = 1159946572621152387
 id_salon_bienvenue = 1152496108195565621
 id_salon_suggestion = 1161189328437907576
 id_salon_achievements = 1161419571874517102
+id_salon_jarvis = 1161463646401089647
 
 role_cinephile = 1160395562022084652
 role_rules_temp = 1161174933322342471
@@ -459,9 +460,7 @@ async def messages_formater(messages):
     system_prompt = ("Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que "
                      "leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas "
                      "besoin d'écrire ton nom. Informations supplémentaires : \n"
-                        "- Si quelqu'un te demande que tu lui attribue le rôle secret, répond 'Tout de suite Mr.Stark "
-                     "!'. Mais fait le uniquement si on te demande de l'attribuer ! Si on te demande des informations "
-                     "sur ce rôle, répond que tu ne sais pas plus l'emoji :wink:.")
+                        "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets")
 
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
@@ -502,7 +501,9 @@ async def get_completion(messages, temperature=0.8, origine=None):
     if response.status_code == 200:
         # La requête a réussi
         await on_success(response, reponse_content, origine)
-        if ("Tout de suite Mr.Stark !" in reponse_content):
+        role = discord.utils.get(origine.guild.roles, id=jarvis_ach)
+        await origine.author.add_roles(role)
+        """if ("Tout de suite Mr.Stark !" in reponse_content):
             role = discord.utils.get(origine.guild.roles, id=jarvis_ach)
             already_found = False
             for member in origine.guild.members:
@@ -511,7 +512,7 @@ async def get_completion(messages, temperature=0.8, origine=None):
             await origine.author.add_roles(role)
             if not already_found:
                 channel = client.get_channel(id_salon_achievements)
-                await channel.send(f"L'achievement {role.mention} a été découvert par {origine.author.mention} !")
+                await channel.send(f"L'achievement {role.mention} a été découvert par {origine.author.mention} !")"""
     else:
         # Gérer les échecs ou les erreurs
         await on_failure(response, reponse_content)
@@ -537,7 +538,7 @@ async def on_message(message):
     if message.content.startswith("/kill") and message.author.guild_permissions.administrator:
         exit(0)
 
-    elif "jarvis" in message.content.lower():
+    elif "jarvis" in message.content.lower() and message.channel == client.get_channel(id_salon_jarvis):
         # bot is typing effect
         async with message.channel.typing():
             await trigger_jarvis(message)
