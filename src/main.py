@@ -530,6 +530,7 @@ async def trigger_jarvis(message):
 
 @client.event
 async def on_message(message):
+    print("on_message")
     if message.author == client.user:
         return
 
