@@ -25,7 +25,7 @@ id_salon_film = 1154611673844416552
 id_salon_rules = 1154616431921606678
 id_salon_roles = 1159946572621152387
 id_salon_bienvenue = 1152496108195565621
-id_salon_suggestion = 1161189328437907576
+id_salon_suggestion = 1161483013046140928
 id_salon_achievements = 1161419571874517102
 id_salon_jarvis = 1161463646401089647
 
@@ -460,7 +460,11 @@ async def messages_formater(messages):
     system_prompt = ("Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que "
                      "leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas "
                      "besoin d'écrire ton nom. Informations supplémentaires : \n"
-                        "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets")
+                        "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets"
+                        "- Tu es basé sur le modèle gpt-3.5-turbo"
+                        "- Quand un utilisateur te taquine, te demandde des trucs absurdes : tu peux répondre avec humour"
+                        "ou en te prenant au jeux, etc.. toi qui voit !")
+
 
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
@@ -531,7 +535,7 @@ async def trigger_jarvis(message):
 
 @client.event
 async def on_message(message):
-    print("on_message")
+    print("on_message", time.localtime().tm_hour)
     if message.author == client.user:
         return
 
@@ -610,7 +614,7 @@ async def on_message(message):
         await message_to_unreact.clear_reactions()
 
     # Si le message a été envoyé entre 2h et 5h du matin
-    elif 2 <= time.localtime().tm_hour <= 5:
+    elif 2 <= time.localtime().tm_hour < 5:
         # On regarde parmis tous les membres du serveur si quelqu'un a l'achievement "early bird", si personne ne l'a
         # alors on écrit un message dans le channel des achievements
         already_found = False
@@ -626,7 +630,7 @@ async def on_message(message):
 
 
     # Si le message a été envoyé entre 5h et 8h du matin
-    elif 5 <= time.localtime().tm_hour <= 8:
+    elif 5 <= time.localtime().tm_hour < 8:
         already_found = False
         for member in message.guild.members:
             if discord.utils.get(member.roles, id=early_bird_id) is not None:
