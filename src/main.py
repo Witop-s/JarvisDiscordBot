@@ -10,8 +10,9 @@ import discord
 import html
 
 import requests
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import time
+from pytz import timezone
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
@@ -28,6 +29,7 @@ id_salon_bienvenue = 1152496108195565621
 id_salon_suggestion = 1161483013046140928
 id_salon_achievements = 1161419571874517102
 id_salon_jarvis = 1161463646401089647
+id_salon_jarvis_logs = 1162967137892184215
 
 role_cinephile = 1160395562022084652
 role_rules_temp = 1161174933322342471
@@ -62,6 +64,7 @@ LGBT = 1159966676285141012
 Soutien_LGBT = 1161411225037570129
 
 role_achievements = 1161418291613552650
+role_createur = 1155648567134928927
 
 
 
@@ -288,6 +291,7 @@ async def on_raw_reaction_add(payload):
         # Add formation
         role = ""
         user = payload.member
+        print(payload.emoji.name)
         if payload.emoji.name == "💻":
             role = discord.utils.get(user.guild.roles, id=informatique)
         elif payload.emoji.name == "📁":
@@ -327,6 +331,7 @@ async def on_raw_reaction_add(payload):
             role = discord.utils.get(user.guild.roles, id=LGBT)
         elif payload.emoji.name == "🌈":
             role = discord.utils.get(user.guild.roles, id=Soutien_LGBT)
+        print(role)
         await user.add_roles(role)
 
 
@@ -431,8 +436,14 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     # await check_films()
     # schedule pour exécuter la fonction check_films tous les jeudi à 12h
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(check_films, 'cron', day_of_week='thu', hour=12)
+    scheduler = AsyncIOScheduler()
+
+    eastern_tz = timezone('US/Eastern')
+    scheduler.configure(timezone=eastern_tz)
+
+    scheduler.add_job(check_films, 'cron', day_of_week='fri', hour=12, minute=0, second=0)
+    # Toute les 15 minutes, print logs
+    scheduler.add_job(printLogJarvis, 'cron', hour='*/1', minute=0, second=0)
     scheduler.start()
 
 
@@ -462,7 +473,7 @@ async def messages_formater(messages):
                      "besoin d'écrire ton nom. Informations supplémentaires : \n"
                         "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets"
                         "- Tu es basé sur le modèle gpt-3.5-turbo"
-                        "- Quand un utilisateur te taquine, te demandde des trucs absurdes : tu peux répondre avec humour"
+                        "- Quand un quelqu'un te taquine, te demande des trucs absurdes : tu peux répondre avec humour"
                         "ou en te prenant au jeux, etc.. toi qui voit !")
 
 
@@ -500,7 +511,12 @@ async def get_completion(messages, temperature=0.8, origine=None):
     # Effectuer une requête POST avec la bibliothèque requests
     response = requests.post(url, headers=headers, data=json.dumps(payload))
     # chercher le message via ["choices"][0]["message"]["content"]
+    print(response.json())
     reponse_content = response.json()["choices"][0]["message"]["content"]
+    finish_reason = response.json()["choices"][0]["finish_reason"]
+
+    if finish_reason == "length":
+        reponse_content += "[...]\n" + "J'ai atteint ma la limite de caractères, désolé !"
 
     if response.status_code == 200:
         # La requête a réussi
@@ -621,6 +637,9 @@ async def on_message(message):
         for member in message.guild.members:
             if discord.utils.get(member.roles, id=night_owl_id) is not None:
                 already_found = True
+        # Les admins ne peuvent pas découvrir l'achievement
+        if not already_found and discord.utils.get(message.author.roles, id=role_createur) is not None:
+            return
         # Ajouter l'achievement "night owl"
         await message.author.add_roles(message.guild.get_role(night_owl_id))
         if not already_found:
@@ -635,6 +654,9 @@ async def on_message(message):
         for member in message.guild.members:
             if discord.utils.get(member.roles, id=early_bird_id) is not None:
                 already_found = True
+        # Les admins ne peuvent pas découvrir l'achievement
+        if not already_found and discord.utils.get(message.author.roles, id=role_createur) is not None:
+            return
         # Ajouter l'achievement "early bird"
         await message.author.add_roles(message.guild.get_role(early_bird_id))
         if not already_found:
@@ -642,6 +664,13 @@ async def on_message(message):
             role_early_bird = discord.utils.get(message.guild.roles, id=early_bird_id)
             await channel.send(f"L'achievement {role_early_bird.mention} a été découvert par {message.author.mention} !")
 
+@client.event
+async def printLogJarvis():
+    print("printLogJarvis")
+    channel = client.get_channel(id_salon_jarvis_logs)
+    # Time + ping + "Jarvis online"
+    log = "[" + time.strftime("%H:%M:%S", time.localtime()) + "] - " + str(round(client.latency, 2)) + "ms" + " Jarvis up"
+    await channel.send(log)
 
 try:
     token = os.getenv("TOKEN") or ""
