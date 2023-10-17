@@ -30,6 +30,8 @@ id_salon_suggestion = 1161483013046140928
 id_salon_achievements = 1161419571874517102
 id_salon_jarvis = 1161463646401089647
 id_salon_jarvis_logs = 1162967137892184215
+id_salon_bots = 1162967137892184215
+id_salon_prive_W = 1160048830331490314
 
 role_cinephile = 1160395562022084652
 role_rules_temp = 1161174933322342471
@@ -331,6 +333,8 @@ async def on_raw_reaction_add(payload):
             role = discord.utils.get(user.guild.roles, id=LGBT)
         elif payload.emoji.name == "🌈":
             role = discord.utils.get(user.guild.roles, id=Soutien_LGBT)
+        else:
+            return
         print(role)
         await user.add_roles(role)
 
@@ -405,6 +409,9 @@ async def on_raw_reaction_remove(payload):
             role = discord.utils.get(user.guild.roles, id=LGBT)
         elif payload.emoji.name == "🌈":
             role = discord.utils.get(user.guild.roles, id=Soutien_LGBT)
+        else:
+            return
+        print(role)
         await user.remove_roles(role)
 
 
@@ -471,10 +478,10 @@ async def messages_formater(messages):
     system_prompt = ("Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que "
                      "leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas "
                      "besoin d'écrire ton nom. Informations supplémentaires : \n"
-                        "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets"
-                        "- Tu es basé sur le modèle gpt-3.5-turbo"
-                        "- Quand un quelqu'un te taquine, te demande des trucs absurdes : tu peux répondre avec humour"
-                        "ou en te prenant au jeux, etc.. toi qui voit !")
+                     "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets"
+                     "- Tu es basé sur le modèle gpt-3.5-turbo"
+                     "- Quand un quelqu'un te taquine, te demande des trucs absurdes : fait le, prends toi au jeu"
+                     "- Tu peux utiliser utiliser des emojis et des gifs")
 
 
     messages_formated.append({"role": "system", "content": system_prompt})
@@ -558,7 +565,7 @@ async def on_message(message):
     if message.content.startswith("/kill") and message.author.guild_permissions.administrator:
         exit(0)
 
-    elif "jarvis" in message.content.lower() and message.channel == client.get_channel(id_salon_jarvis):
+    elif "jarvis" in message.content.lower() and (message.channel == client.get_channel(id_salon_jarvis) or message.channel == client.get_channel(id_salon_bots) or message.channel == client.get_channel(id_salon_prive_W)):
         # bot is typing effect
         async with message.channel.typing():
             await trigger_jarvis(message)
