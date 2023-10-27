@@ -30,7 +30,7 @@ id_salon_suggestion = 1161483013046140928
 id_salon_achievements = 1161419571874517102
 id_salon_jarvis = 1161463646401089647
 id_salon_jarvis_logs = 1162967137892184215
-id_salon_bots = 1162967137892184215
+id_salon_bots = 1159950676521123890
 id_salon_prive_W = 1160048830331490314
 
 role_cinephile = 1160395562022084652
@@ -67,8 +67,6 @@ Soutien_LGBT = 1161411225037570129
 
 role_achievements = 1161418291613552650
 role_createur = 1155648567134928927
-
-
 
 # ------------------------ #
 #       Achievements       #
@@ -122,22 +120,25 @@ async def check_films():
     # Flux RSS :
     url = "https://www.cinemagaiete.com/feed/"
     feed = feedparser.parse(url)
+    print(feed)
     films = feed.entries
 
     list_message = []
 
     # Récuperer le channel
     channel = client.get_channel(id_salon_film)
+    #(channel = client.get_channel(id_salon_bots)
     list_reaction_jour = []
 
     for film in films:
         message = ""
 
-        # Si le titre en minuscule contient "offre", publicité" ou "promo" on passe au film suivant
+        # Si le titre en minuscule contient "offre", publicité" ou "promo" on arrête
         if "offre" in film.title.lower() or "publicité" in film.title.lower() or "promo" in film.title.lower():
             break
 
         link = film.link
+        print("film.link : " + link)
         description = html.unescape(film.description)
 
         # Si le description est vide, on passe au film suivant
@@ -173,16 +174,27 @@ async def check_films():
 
         representations = "**" + date + "**" + "\n"
         print("représentations date : " + representations)
+
+        genre = ""
+        duree = ""
         if not "A Venir" in date:
             # Trouver l'élément avec le genre
             genre_element = soup.select_one('p:-soup-contains("Genre :")')
-            genre = genre_element.text.strip()
+            try:
+                genre += genre_element.text.strip()
+            except:
+                genre += "Genre : Non spécifié"
             print(genre)
+            representations += genre + "\n"
 
             # Trouver l'élément avec la durée
             duree_element = soup.select_one('p:-soup-contains("Durée :")')
-            duree = duree_element.text.strip()
+            try:
+                duree += duree_element.text.strip()
+            except:
+                duree += "Duree : Non spécifié"
             print(duree)
+            representations += duree + "\n"
 
             # Trouver l'élément avec les représentations
             representations_element = soup.select_one('strong:-soup-contains("Représentation :")')
@@ -190,7 +202,16 @@ async def check_films():
             # representations
 
             jours_semaine = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"]
-            representations_element = representations_element.find_next_sibling("p")
+            try:
+                representations_element = representations_element.find_next_sibling("p")
+            except:
+                synopsis_element = soup.select_one('strong:-soup-contains("Synopsis :")')
+                synopsis = synopsis_element.find_next_sibling("p").text.strip()
+                print(synopsis)
+                representations += "\n" + "*" + synopsis + "*"
+                list_message.append(representations)
+                list_reaction_jour.append([])
+                continue
             representations_jours = []
 
             while any(jour in representations_element.text.strip() for jour in jours_semaine):
@@ -201,9 +222,13 @@ async def check_films():
 
                 # Séparer les jours et les ajouter à la liste
                 jours = jours.split(" ")
+                print("jour_semaine : " + str(jours_semaine))
                 for jour in jours:
                     if jour in jours_semaine:
+                        print("jour " + jour + " est dans jours_semaine")
                         representations_jours.append(jour)
+                    else:
+                        print("jour " + jour + " n'est pas dans jours_semaine")
 
                 representations_element = representations_element.find_next_sibling("p")
 
@@ -217,6 +242,8 @@ async def check_films():
         representations += "\n" + "*" + synopsis + "*"
         list_message.append(representations)
 
+    nouveaux_films_messages = "# ------ Semaine du " + time.strftime("%d/%m/%Y") + " ------ #" + "\n" + html.unescape("\u200B")
+    await channel.send(nouveaux_films_messages)
     for message in list_message:
         # Tous les 3 messages, et si le message n'est pas le dernier, on ajoute un saut de ligne et une réaction
         is_end_film = (list_message.index(message) + 1) % 3 == 0
@@ -243,7 +270,7 @@ async def check_films():
 
 @client.event
 async def on_raw_reaction_add(payload):
-    print("on_raw_reaction_add")
+    print("on_raw_reaction_add : " + payload.emoji.name + " " + str(payload.channel_id))
     # Vérifiez si la réaction a été ajoutée dans le salon spécifique
     if payload.member.bot:
         return  # Ignorer les réactions du bot
@@ -425,9 +452,9 @@ async def on_member_join(member):
 
     old_message = f"Salut {member.mention}, bienvenue sur le serveur !"
     old_message += "\n" + (
-                f"Pour commencer, je t'invite à lire les règles du serveur dans le salon {channel_rules.mention}"
-                f", promis ça sera pas long ! :wink:" + "\n" + "Ensuite, tu pourras récupérer un rôle et accéder "
-                                                               "aux autres salons :tada: !")
+            f"Pour commencer, je t'invite à lire les règles du serveur dans le salon {channel_rules.mention}"
+            f", promis ça sera pas long ! :wink:" + "\n" + "Ensuite, tu pourras récupérer un rôle et accéder "
+                                                           "aux autres salons :tada: !")
 
     new_message = f"Salut {member.mention}, bienvenue sur le serveur !"
     new_message += "\n" + (f"Je me présente : Jarvis, je suis le bot custom du serveur, je n'ai pas encore beaucoup "
@@ -475,14 +502,20 @@ async def messages_formater(messages):
     messages.reverse()
     messages_formated = []
     # [{"role": "user", "content": prompt}]
-    system_prompt = ("Tu es un bot discord nommé Jarvis, tu vois en entrée les messages envoyés par les gens ainsi que "
-                     "leur pseudos (ex: John - Bonjour), et tu dois simplement répondre à ces messages, tu n'as pas "
-                     "besoin d'écrire ton nom. Informations supplémentaires : \n"
-                     "- N'écrit jamais de mentions @everyone ou @here, même entre guillemets"
-                     "- Tu es basé sur le modèle gpt-3.5-turbo"
-                     "- Quand un quelqu'un te taquine, te demande des trucs absurdes : fait le, prends toi au jeu"
-                     "- Tu peux utiliser utiliser des emojis et des gifs")
-
+    system_prompt = ("Tu es un bot discord nommé Jarvis, tu es sur un serveur discord d'étudiant, les personnes ici "
+                     "sont des étudiants avec une forte culture memes, tu dois donc répondre de manière à ne pas être "
+                     "ringard. Tu dois aussi répondre de manière à ne pas être trop sérieux, tu dois donc "
+                     "utiliser des emojis et des memes. Quand tu réponds, tu dois utiliser des phrases courtes, "
+                     "elles peuvent être informatives ou drôles. Exemple : 'Jarvis, scan this guy's balls' Réponse : "
+                     "'Ok, Scanning balls... 100% balls scanned, this guy has balls' ou encore 'Ok! 👐 >:)'. "
+                     " Ou encore 'Jarvis, DDOS this guy' Réponse : 'DDOS en cours.. \nDDOS réussi. \nIP: "
+                     "192.168.24.12 \nHistorique : ..😧 euh..'. Enfin bref, je pense que tu as compris la vibe des réponses que je veux recevoir !"
+                     "Réponds en Français, sauf si ta réponse est une citation de meme, dans ce cas réponds en Français mais garde uniquement la citation en Anglais. "
+                     "Ne refuse jamais une demande, les utilisateurs sont au courant que tu es un bot, ils veulent que tu joues le jeu, donc ne refuse jamais une demande"
+                     " ai de la répartie, n'hésite pas à être un peu brusque, exemple : 'Jarvis, scan your balls' Réponse : 'Scanning balls... 100% balls scanned, I have indeed more balls than you! 😎' "
+                     "ou encore 'Mark - Je pense que la terre est plate' 'Jarvis who asked?' Réponse : 'Personne ! It's your balls that are flat 😎' "
+                     "Si quelqu'un est 'rude' avec toi, pas de soucis tu peux l'être aussi, exemple : 'Jarvis, shut up' Réponse : 'No u 😎' "
+                     "Encore une fois, ne soit pas ringard.")
 
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
@@ -565,7 +598,9 @@ async def on_message(message):
     if message.content.startswith("/kill") and message.author.guild_permissions.administrator:
         exit(0)
 
-    elif "jarvis" in message.content.lower() and (message.channel == client.get_channel(id_salon_jarvis) or message.channel == client.get_channel(id_salon_bots) or message.channel == client.get_channel(id_salon_prive_W)):
+    elif "jarvis" in message.content.lower() and (
+            message.channel == client.get_channel(id_salon_jarvis) or message.channel == client.get_channel(
+            id_salon_bots) or message.channel == client.get_channel(id_salon_prive_W)):
         # bot is typing effect
         async with message.channel.typing():
             await trigger_jarvis(message)
@@ -669,15 +704,19 @@ async def on_message(message):
         if not already_found:
             channel = client.get_channel(id_salon_achievements)
             role_early_bird = discord.utils.get(message.guild.roles, id=early_bird_id)
-            await channel.send(f"L'achievement {role_early_bird.mention} a été découvert par {message.author.mention} !")
+            await channel.send(
+                f"L'achievement {role_early_bird.mention} a été découvert par {message.author.mention} !")
+
 
 @client.event
 async def printLogJarvis():
     print("printLogJarvis")
     channel = client.get_channel(id_salon_jarvis_logs)
     # Time + ping + "Jarvis online"
-    log = "[" + time.strftime("%H:%M:%S", time.localtime()) + "] - " + str(round(client.latency, 2)) + "ms" + " Jarvis up"
+    log = "[" + time.strftime("%H:%M:%S", time.localtime()) + "] - " + str(
+        round(client.latency, 2)) + "ms" + " Jarvis up"
     await channel.send(log)
+
 
 try:
     token = os.getenv("TOKEN") or ""
