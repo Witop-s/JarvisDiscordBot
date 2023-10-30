@@ -78,6 +78,8 @@ jarvis_ach = 1161438875223343205
 
 reponse_jarvis = ""
 
+scheduler = AsyncIOScheduler()
+
 openai_token = ""
 try:
     openai_token = os.getenv("OPENAI") or ""
@@ -113,6 +115,35 @@ async def add_day_reaction(message, jour):
     elif jour == "DIMANCHE":
         await message.add_reaction("🇩")
 
+@client.event
+async def store_films_in_file(films):
+    # Ouvrir le fichier en mode écriture
+    with open("films.txt", "w", encoding="utf-8") as file:
+        # Écrire chaque film dans le fichier
+        for film in films:
+            file.write(film.title + "\n")
+            file.write(film.link + "\n")
+            file.write(film.description + "\n")
+            file.write("\n")
+@client.event
+async def has_changed(films):
+    # Ouvrir le fichier en mode lecture
+    with open("films.txt", "r", encoding="utf-8") as file:
+        # Lire le contenu du fichier
+        file_content = file.read()
+        # Si le contenu du fichier est différent de la liste des films
+
+        expected_content = ""
+        for film in films:
+            expected_content += film.title + "\n"
+            expected_content += film.link + "\n"
+            expected_content += film.description + "\n"
+            expected_content += "\n"
+
+        if file_content != expected_content:
+            return True
+        return False
+
 
 @client.event
 async def check_films():
@@ -122,6 +153,13 @@ async def check_films():
     feed = feedparser.parse(url)
     print(feed)
     films = feed.entries
+
+    if (has_changed(films)):
+        store_films_in_file(films)
+    else:
+        # Reschedule myself in 15 minutes
+        scheduler.add_job(check_films, 'date', run_date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 900)))
+        return
 
     list_message = []
 
@@ -470,12 +508,10 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     # await check_films()
     # schedule pour exécuter la fonction check_films tous les jeudi à 12h
-    scheduler = AsyncIOScheduler()
-
     eastern_tz = timezone('US/Eastern')
     scheduler.configure(timezone=eastern_tz)
 
-    scheduler.add_job(check_films, 'cron', day_of_week='fri', hour=12, minute=0, second=0)
+    scheduler.add_job(check_films, 'cron', day_of_week='thu', hour=12, minute=0, second=0)
     # Toute les 15 minutes, print logs
     scheduler.add_job(printLogJarvis, 'cron', hour='*/1', minute=0, second=0)
     scheduler.start()
