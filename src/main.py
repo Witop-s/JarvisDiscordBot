@@ -115,8 +115,10 @@ async def add_day_reaction(message, jour):
     elif jour == "DIMANCHE":
         await message.add_reaction("🇩")
 
+
 @client.event
 async def store_films_in_file(films):
+    print("store_films_in_file")
     # Ouvrir le fichier en mode écriture
     with open("films.txt", "w", encoding="utf-8") as file:
         # Écrire chaque film dans le fichier
@@ -125,8 +127,13 @@ async def store_films_in_file(films):
             file.write(film.link + "\n")
             file.write(film.description + "\n")
             file.write("\n")
+
+    exit(0)
+
+
 @client.event
 async def has_changed(films):
+    print("has_changed")
     # Ouvrir le fichier en mode lecture
     with open("films.txt", "r", encoding="utf-8") as file:
         # Lire le contenu du fichier
@@ -142,11 +149,12 @@ async def has_changed(films):
 
         if file_content != expected_content:
             return True
-        return False
+    return False
 
 
 @client.event
 async def check_films():
+    print("check_films")
     # Récuperer la liste des films au cinéma
     # Flux RSS :
     url = "https://www.cinemagaiete.com/feed/"
@@ -154,7 +162,7 @@ async def check_films():
     print(feed)
     films = feed.entries
 
-    if (has_changed(films)):
+    if has_changed(films):
         store_films_in_file(films)
     else:
         # Reschedule myself in 15 minutes
@@ -627,7 +635,10 @@ async def trigger_jarvis(message):
 
 @client.event
 async def on_message(message):
-    print("on_message", time.localtime().tm_hour)
+    dots = ""
+    if len(message.content) > 50:
+        dots = "[...]"
+    print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " " + message.content[:50] + dots)
     if message.author == client.user:
         return
 
