@@ -162,8 +162,8 @@ async def check_films():
     print(feed)
     films = feed.entries
 
-    if has_changed(films):
-        store_films_in_file(films)
+    if await has_changed(films):
+        await store_films_in_file(films)
     else:
         # Reschedule myself in 15 minutes
         scheduler.add_job(check_films, 'date', run_date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 900)))
