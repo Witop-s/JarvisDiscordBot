@@ -1,6 +1,7 @@
 # This code is based on the following example:
 # https://discordpy.readthedocs.io/en/stable/quickstart.html#a-minimal-bot
 import asyncio
+import glob
 import json
 import os
 from urllib.request import Request
@@ -9,12 +10,18 @@ import feedparser
 import discord
 import html
 
+from pdf2image import convert_from_path
+from pdf2jpg import pdf2jpg
 import requests
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import time
 from pytz import timezone
 from bs4 import BeautifulSoup
 from discord.ext import commands
+
+from selenium import webdriver
+from selenium.webdriver import Keys, ActionChains
+from selenium.webdriver.common.by import By
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -90,7 +97,6 @@ except Exception as e:
     exit(1)
 
 
-@client.event
 async def get_html(url):
     # Envoyez une requête HTTP GET pour obtenir le contenu de la page
     response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -98,7 +104,6 @@ async def get_html(url):
     return response.text
 
 
-@client.event
 async def add_day_reaction(message, jour):
     if jour == "LUNDI":
         await message.add_reaction("🇱")
@@ -128,12 +133,12 @@ async def store_films_in_file(films):
             file.write(film.description + "\n")
             file.write("\n")
 
-    exit(0)
 
-
-@client.event
 async def has_changed(films):
     print("has_changed")
+    # Si le fichier n'existe pas, on le crée
+    if not os.path.exists("films.txt"):
+        return True
     # Ouvrir le fichier en mode lecture
     with open("films.txt", "r", encoding="utf-8") as file:
         # Lire le contenu du fichier
@@ -149,10 +154,9 @@ async def has_changed(films):
 
         if file_content != expected_content:
             return True
-    return False
+        return False
 
 
-@client.event
 async def check_films():
     print("check_films")
     # Récuperer la liste des films au cinéma
@@ -166,14 +170,15 @@ async def check_films():
         await store_films_in_file(films)
     else:
         # Reschedule myself in 15 minutes
-        scheduler.add_job(check_films, 'date', run_date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 900)))
+        scheduler.add_job(check_films, 'date',
+                          run_date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 900)))
         return
 
     list_message = []
 
     # Récuperer le channel
     channel = client.get_channel(id_salon_film)
-    #(channel = client.get_channel(id_salon_bots)
+    # (channel = client.get_channel(id_salon_bots)
     list_reaction_jour = []
 
     for film in films:
@@ -288,7 +293,8 @@ async def check_films():
         representations += "\n" + "*" + synopsis + "*"
         list_message.append(representations)
 
-    nouveaux_films_messages = "# ------ Semaine du " + time.strftime("%d/%m/%Y") + " ------ #" + "\n" + html.unescape("\u200B")
+    nouveaux_films_messages = "# ------ Semaine du " + time.strftime("%d/%m/%Y") + " ------ #" + "\n" + html.unescape(
+        "\u200B")
     await channel.send(nouveaux_films_messages)
     for message in list_message:
         # Tous les 3 messages, et si le message n'est pas le dernier, on ajoute un saut de ligne et une réaction
@@ -313,6 +319,95 @@ async def check_films():
     last_sent_message = await channel.send(last_message)
     await last_sent_message.add_reaction("🔔")
 
+
+async def download_workshop(link):
+    # Create a new instance of the Chrome driver
+    driver = webdriver.Chrome()
+
+    # Navigate to the web page
+    driver.get(link)
+
+    # Capture a screenshot of the web page
+    time.sleep(3)
+    driver.save_screenshot('screenshot.png')
+
+    # Locate the email input element by its HTML attributes
+    email = os.getenv("STUDENT_ID") or ""
+    email = email + "@cgmatane.qc.ca"
+    driver.find_element(By.XPATH, '//*[@id="i0116"]').send_keys(email + Keys.ENTER)
+    time.sleep(3)
+
+    mdp = os.getenv("STUDENT_PASSWORD") or ""
+    driver.find_element(By.XPATH, '//*[@id="i0118"]').send_keys(mdp + Keys.ENTER)
+    time.sleep(2)
+
+    driver.find_element(By.XPATH, '//*[@id="idBtn_Back"]').click()
+    time.sleep(5)
+
+    # CTRL + P
+    actions = ActionChains(driver)
+    actions.key_down(Keys.CONTROL)  # Press the "Ctrl" key
+    actions.send_keys('o')  # Press the "p" key
+    actions.key_up(Keys.CONTROL)  # Release the "Ctrl" key
+    actions.perform()
+
+    time.sleep(2)
+
+    # 5 times key down + 1 time enter + 4 times key down + 1 time enter
+    actions = ActionChains(driver)
+    actions.send_keys(Keys.DOWN + Keys.DOWN + Keys.DOWN + Keys.DOWN + Keys.DOWN)
+    actions.send_keys(Keys.ENTER + Keys.DOWN + Keys.DOWN + Keys.DOWN + Keys.ENTER)
+    actions.perform()
+    time.sleep(3)
+
+    # 1 time enter
+    actions = ActionChains(driver)
+    actions.send_keys(Keys.ENTER)
+    actions.perform()
+    time.sleep(3)
+
+    # Try to find the downloaded page in the downloads folder
+    # Get the path to the downloads folder
+    downloads_path = os.path.expanduser('~/Downloads')
+
+    # Get the path to the downloaded file
+    downloaded_file = max(
+        glob.glob(os.path.join(downloads_path, '*.pdf')), key=os.path.getctime)
+
+    # If the name of the downloaded file does not contain "week", then the file was not downloaded
+    if 'week' not in downloaded_file.lower():
+        raise Exception('The file was not downloaded')
+
+    # If the file is older than x seconds, then the file was not downloaded
+    if time.time() - os.path.getctime(downloaded_file) > 30:
+        raise Exception('The file was not downloaded')
+
+    # Convert the pdf to png
+    path_normalised = os.path.normpath(downloaded_file)
+    print(path_normalised)
+    inputpath = path_normalised
+    inputpath = r"C:/Users/noahe/Downloads/week.pdf"
+    # Store in the local workshop folder inside src
+    outputpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'workshop')
+    outputpath = "C:/Users/noahe/Downloads/"
+    print("Input Path: ", inputpath)
+    print("Output Path: ", outputpath)
+    result = pdf2jpg.convert_pdf2jpg(inputpath, outputpath, pages="ALL")
+
+    time.sleep(10)
+
+    # Close the browser
+    driver.quit()
+
+
+async def test():
+    inputpath = 'week.pdf'
+    outputpath = r"C:\Users\noahe\Documents\GitHub\MataneCGDiscordBot\src\workshop\""
+    pdf_images = convert_from_path(inputpath, 500, poppler_path=r"C:\Program Files\poppler-23.11.0\Library\bin")
+
+    for idx in range(len(pdf_images)):
+        pdf_images[idx].save('pdf_page_' + str(idx + 1) + '.png', 'PNG')
+    print("Successfully converted PDF to images")
 
 @client.event
 async def on_raw_reaction_add(payload):
@@ -524,6 +619,9 @@ async def on_ready():
     scheduler.add_job(printLogJarvis, 'cron', hour='*/1', minute=0, second=0)
     scheduler.start()
 
+    link = r"https://cgmatane-my.sharepoint.com/:w:/g/personal/duartewalsheva_cgmatane_qc_ca/ESF_HZgwKX5KnLf7CWu2S-cB2QDo-EsYDkz12cfNVF_1Zw?e=qIu92t"
+    asyncio.create_task(test())
+
 
 @client.event
 async def on_failure(urlrequest, reponse_content):
@@ -540,7 +638,6 @@ async def on_success(urlrequest, reponse_content, origine):
     await origine.channel.send(reponse_content)
 
 
-@client.event
 async def messages_formater(messages):
     # inverser l'ordre des messages
     messages.reverse()
@@ -574,7 +671,6 @@ async def messages_formater(messages):
     return messages_formated
 
 
-@client.event
 async def get_completion(messages, temperature=0.8, origine=None):
     messages = await messages_formater(messages)
 
@@ -622,7 +718,6 @@ async def get_completion(messages, temperature=0.8, origine=None):
         await on_failure(response, reponse_content)
 
 
-@client.event
 async def trigger_jarvis(message):
     # Chercher les 10 derniers messages
     messages = []
@@ -638,7 +733,8 @@ async def on_message(message):
     dots = ""
     if len(message.content) > 50:
         dots = "[...]"
-    print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " " + message.content[:50] + dots)
+    print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " " + message.content[
+                                                                                                     :50] + dots)
     if message.author == client.user:
         return
 
@@ -647,7 +743,7 @@ async def on_message(message):
 
     elif "jarvis" in message.content.lower() and (
             message.channel == client.get_channel(id_salon_jarvis) or message.channel == client.get_channel(
-            id_salon_bots) or message.channel == client.get_channel(id_salon_prive_W)):
+        id_salon_bots) or message.channel == client.get_channel(id_salon_prive_W)):
         # bot is typing effect
         async with message.channel.typing():
             await trigger_jarvis(message)
@@ -755,7 +851,6 @@ async def on_message(message):
                 f"L'achievement {role_early_bird.mention} a été découvert par {message.author.mention} !")
 
 
-@client.event
 async def printLogJarvis():
     print("printLogJarvis")
     channel = client.get_channel(id_salon_jarvis_logs)
