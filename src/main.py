@@ -1,23 +1,24 @@
 # This code is based on the following example:
 # https://discordpy.readthedocs.io/en/stable/quickstart.html#a-minimal-bot
 import asyncio
+import datetime
 import glob
 import json
 import os
 from urllib.request import Request
 
+import cv2
 import feedparser
 import discord
 import html
 
+import numpy as np
 from pdf2image import convert_from_path
-from pdf2jpg import pdf2jpg
 import requests
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import time
 from pytz import timezone
 from bs4 import BeautifulSoup
-from discord.ext import commands
 
 from selenium import webdriver
 from selenium.webdriver import Keys, ActionChains
@@ -34,6 +35,7 @@ id_salon_rules = 1154616431921606678
 id_salon_roles = 1159946572621152387
 id_salon_bienvenue = 1152496108195565621
 id_salon_suggestion = 1161483013046140928
+id_salon_workshop = 1169490284632088617
 id_salon_achievements = 1161419571874517102
 id_salon_jarvis = 1161463646401089647
 id_salon_jarvis_logs = 1162967137892184215
@@ -342,7 +344,11 @@ async def download_workshop(link):
     time.sleep(2)
 
     driver.find_element(By.XPATH, '//*[@id="idBtn_Back"]').click()
-    time.sleep(5)
+    time.sleep(8)
+
+    # Click on the body to make sure the page is active
+    driver.find_element(By.XPATH, '/html/body').click()
+    time.sleep(2)
 
     # CTRL + P
     actions = ActionChains(driver)
@@ -385,29 +391,33 @@ async def download_workshop(link):
     # Convert the pdf to png
     path_normalised = os.path.normpath(downloaded_file)
     print(path_normalised)
-    inputpath = path_normalised
-    inputpath = r"C:/Users/noahe/Downloads/week.pdf"
-    # Store in the local workshop folder inside src
-    outputpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'workshop')
-    outputpath = "C:/Users/noahe/Downloads/"
-    print("Input Path: ", inputpath)
-    print("Output Path: ", outputpath)
-    result = pdf2jpg.convert_pdf2jpg(inputpath, outputpath, pages="ALL")
 
-    time.sleep(10)
+    inputpath = path_normalised
+    pdf_images = convert_from_path(inputpath, 500, poppler_path=r"C:\Program Files\poppler-23.11.0\Library\bin")
+
+    images = []
+    for idx in range(len(pdf_images)):
+        pdf_images[idx].save('workshop/pdf_page_' + str(idx + 1) + '.png', 'PNG')
+        images.append(pdf_images[idx])
+    print("Successfully converted PDF to images")
+
+    # Merge the images
+    # Load the images
+    for idx in range(len(images)):
+        images[idx] = cv2.imread('workshop/pdf_page_' + str(idx + 1) + '.png')
+
+    combined_imaged = np.vstack(images)
+    cv2.imwrite('workshop/combined_image.png', combined_imaged)
+
+    # Delete the pdf
+    os.remove(downloaded_file)
 
     # Close the browser
     driver.quit()
 
+    # Return the path to the image
+    return os.path.normpath('workshop/combined_image.png')
 
-async def test():
-    inputpath = 'week.pdf'
-    outputpath = r"C:\Users\noahe\Documents\GitHub\MataneCGDiscordBot\src\workshop\""
-    pdf_images = convert_from_path(inputpath, 500, poppler_path=r"C:\Program Files\poppler-23.11.0\Library\bin")
-
-    for idx in range(len(pdf_images)):
-        pdf_images[idx].save('pdf_page_' + str(idx + 1) + '.png', 'PNG')
-    print("Successfully converted PDF to images")
 
 @client.event
 async def on_raw_reaction_add(payload):
@@ -619,9 +629,6 @@ async def on_ready():
     scheduler.add_job(printLogJarvis, 'cron', hour='*/1', minute=0, second=0)
     scheduler.start()
 
-    link = r"https://cgmatane-my.sharepoint.com/:w:/g/personal/duartewalsheva_cgmatane_qc_ca/ESF_HZgwKX5KnLf7CWu2S-cB2QDo-EsYDkz12cfNVF_1Zw?e=qIu92t"
-    asyncio.create_task(test())
-
 
 @client.event
 async def on_failure(urlrequest, reponse_content):
@@ -643,20 +650,9 @@ async def messages_formater(messages):
     messages.reverse()
     messages_formated = []
     # [{"role": "user", "content": prompt}]
-    system_prompt = ("Tu es un bot discord nommé Jarvis, tu es sur un serveur discord d'étudiant, les personnes ici "
-                     "sont des étudiants avec une forte culture memes, tu dois donc répondre de manière à ne pas être "
-                     "ringard. Tu dois aussi répondre de manière à ne pas être trop sérieux, tu dois donc "
-                     "utiliser des emojis et des memes. Quand tu réponds, tu dois utiliser des phrases courtes, "
-                     "elles peuvent être informatives ou drôles. Exemple : 'Jarvis, scan this guy's balls' Réponse : "
-                     "'Ok, Scanning balls... 100% balls scanned, this guy has balls' ou encore 'Ok! 👐 >:)'. "
-                     " Ou encore 'Jarvis, DDOS this guy' Réponse : 'DDOS en cours.. \nDDOS réussi. \nIP: "
-                     "192.168.24.12 \nHistorique : ..😧 euh..'. Enfin bref, je pense que tu as compris la vibe des réponses que je veux recevoir !"
-                     "Réponds en Français, sauf si ta réponse est une citation de meme, dans ce cas réponds en Français mais garde uniquement la citation en Anglais. "
-                     "Ne refuse jamais une demande, les utilisateurs sont au courant que tu es un bot, ils veulent que tu joues le jeu, donc ne refuse jamais une demande"
-                     " ai de la répartie, n'hésite pas à être un peu brusque, exemple : 'Jarvis, scan your balls' Réponse : 'Scanning balls... 100% balls scanned, I have indeed more balls than you! 😎' "
-                     "ou encore 'Mark - Je pense que la terre est plate' 'Jarvis who asked?' Réponse : 'Personne ! It's your balls that are flat 😎' "
-                     "Si quelqu'un est 'rude' avec toi, pas de soucis tu peux l'être aussi, exemple : 'Jarvis, shut up' Réponse : 'No u 😎' "
-                     "Encore une fois, ne soit pas ringard.")
+    system_prompt = os.getenv("SYSTEM_PROMPT") or ""
+    if system_prompt == "":
+        raise Exception("SYSTEM_PROMPT is empty")
 
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
@@ -685,15 +681,20 @@ async def get_completion(messages, temperature=0.8, origine=None):
         "model": model,
         "messages": messages,
         "temperature": temperature,
-        "max_tokens": 150,
+        "max_tokens": 400,
     }
 
     # Effectuer une requête POST avec la bibliothèque requests
     response = requests.post(url, headers=headers, data=json.dumps(payload))
     # chercher le message via ["choices"][0]["message"]["content"]
     print(response.json())
-    reponse_content = response.json()["choices"][0]["message"]["content"]
-    finish_reason = response.json()["choices"][0]["finish_reason"]
+    print(response.status_code)
+    try:
+        reponse_content = response.json()["choices"][0]["message"]["content"]
+        finish_reason = response.json()["choices"][0]["finish_reason"]
+    except KeyError:
+        reponse_content = "Ahem le serveur semble inaccessible pour le moment, désolé "
+        finish_reason = "error"
 
     if finish_reason == "length":
         reponse_content += "[...]\n" + "J'ai atteint ma la limite de caractères, désolé !"
@@ -721,7 +722,7 @@ async def get_completion(messages, temperature=0.8, origine=None):
 async def trigger_jarvis(message):
     # Chercher les 10 derniers messages
     messages = []
-    async for msg in message.channel.history(limit=5):
+    async for msg in message.channel.history(limit=10):
         contenu = msg.author.name + " - " + msg.content
         messages.append(contenu + "\n")
     print(messages)
@@ -733,8 +734,8 @@ async def on_message(message):
     dots = ""
     if len(message.content) > 50:
         dots = "[...]"
-    print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " " + message.content[
-                                                                                                     :50] + dots)
+    print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " "
+          + str(message.author) + " : " + message.content[:50] + dots)
     if message.author == client.user:
         return
 
@@ -748,9 +749,27 @@ async def on_message(message):
         async with message.channel.typing():
             await trigger_jarvis(message)
 
-    # Si le message est check_films() et que l'auteur est un admin
+    # Si le message est check_films et que l'auteur est un admin
     elif message.content == "/check_films" and message.author.guild_permissions.administrator:
         await check_films()
+
+    # Si le message est /link2img et que l'auteur est un admin
+    elif message.content.startswith("/link2img") and message.author.guild_permissions.administrator:
+        # Récuperer le lien
+        link = message.content.split("/link2img ")[1]
+        # Télécharger l'image
+        path = await download_workshop(link)
+        # Récuperer le channel
+        channel = client.get_channel(id_salon_workshop)
+        # getting today's date
+        today_date = datetime.date.today()
+        # Increment today's date with 1 week to get the next Monday
+        next_monday = today_date + datetime.timedelta(days=-today_date.weekday(), weeks=1)
+        # Message
+        message = "[Workshop de la semaine du " + next_monday + "](" + link + ")"
+        # Envoyer le message + l'image
+        await channel.send(message, file=discord.File(path))
+
 
     # Si le message est /ping je réponds pong
     elif message.content == "/ping":
