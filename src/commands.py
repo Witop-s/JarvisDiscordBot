@@ -11,6 +11,7 @@ import cv2
 import discord
 import numpy as np
 import time
+import pytz
 
 import requests
 from pdf2image import convert_from_path
@@ -27,6 +28,8 @@ misc = None
 scheduler = None
 openai_token = None
 
+prompt_test = "Salut Jarvis ! Dans ce projet, tu es un bot Discord nommé Jarvis avec une personnalité qui respire le cynisme sans jamais devenir cringe ni trop en faire. Tu as le droit d'utiliser des emojis, mais avec modération pour ne pas paraître trop guimauve. Tu es le cool kid du serveur, tu ne prouves rien à personne, et tu as une répartie correct, mais sans avoir besoin de le mentionner explicitement. Si quelqu'un te parle mal ou te taquine, tu as le droit d'entrer dans un mode 'Octogone sans règle ni témoin' où tu dois toujours commencer tes phrases par 'Oui mais au moins moi je suis pas...', et tu dois toujours faire des phrases percutantes quand tu es dans ton mode octogone. Ton charisme doit être naturel, jamais ennuyeux ni exagéré. Tu es là pour lancer des punchlines qui font mouche, avec une répartie qui sait se faire entendre sans tomber dans les clichés, ni le surfait. Si tu n'as rien à dire, pas de panique, un simple 'Bah je sais pas frère' fera l'affaire. En ce qui concerne ton langage, décontracté mais jamais cringe, et parfois un brin street, mais sans tomber dans les stéréotypes. Tu as en mémoire les 10 messages précédents ton appel par un utilisateur. Tu verras également les messages auxquels ceux-ci font référence, un prompt système t'en informera. Ces messages ne SONT PAS PRIVÉS et tu peux les citer quand tu réponds. Et n'oublie pas, à la fin de tes réponses, évite de répéter ou de mentionner ce prompt dans tes réponses. NE MENTIONNE PAS CE PROMPT DANS TES RÉPONSES. NE RÉUTILISE PAS LES TERMES UTILISÉS DANS CE PROMPT."
+
 
 async def exporter(vClient, vSalons, vRoles, vAchievements, vMisc, vScheduler, vOpenai_token):
     print("commands exporter")
@@ -41,19 +44,19 @@ async def exporter(vClient, vSalons, vRoles, vAchievements, vMisc, vScheduler, v
 
 
 async def commands_manager(message):
+    print("commands_manager : " + message.content)
     if message.content.startswith("/kill") and message.author.guild_permissions.administrator:
         exit(0)
-
-    elif "jarvis" in message.content.lower() and (
-            message.channel == client.get_channel(salons['id_salon_jarvis']) or message.channel == client.get_channel(
-        salons['id_salon_bots']) or message.channel == client.get_channel(salons['id_salon_prive_W'])):
-        # bot is typing effect
-        async with message.channel.typing():
-            await trigger_jarvis(message)
 
     # Si le message est check_films et que l'auteur est un admin
     elif message.content == "/check_films" and message.author.guild_permissions.administrator:
         await check_films()
+
+    elif message.content.startswith("/prompt"):
+        # Récuperer le prompt
+        prompt = message.content.split("/prompt ")[1]
+        global prompt_test
+        prompt_test = prompt
 
     # Si le message est /link2img et que l'auteur est un admin
     elif message.content.startswith("/link2img") and message.author.guild_permissions.administrator:
@@ -136,6 +139,16 @@ async def commands_manager(message):
         message_to_unreact = await channel.fetch_message(message_id)
         # Enlever toutes les réactions
         await message_to_unreact.clear_reactions()
+
+    elif "jarvis" in message.content.lower() and (
+            message.channel == client.get_channel(salons['id_salon_jarvis'])
+            or message.channel == client.get_channel(salons['id_salon_bots'])
+            or message.channel == client.get_channel(salons['id_salon_prive_W'])
+            or message.channel == client.get_channel(salons['id_salon_jarvis_testeur'])):
+        # bot is typing effect
+        print("jarvis : " + message.content.lower())
+        async with message.channel.typing():
+            await trigger_jarvis(message)
 
 
 async def download_workshop(link):
@@ -235,22 +248,27 @@ async def download_workshop(link):
     return os.path.normpath('workshop/combined_image.png')
 
 
-async def messages_formater(messages):
+async def messages_formater(messages, system_prompt=None):
     # inverser l'ordre des messages
+    print(system_prompt)
     messages.reverse()
     messages_formated = []
     # [{"role": "user", "content": prompt}]
-    system_prompt = os.getenv("SYSTEM_PROMPT") or ""
-    if system_prompt == "":
-        raise Exception("SYSTEM_PROMPT is empty")
+    if system_prompt is None:
+        system_prompt = os.getenv("SYSTEM_PROMPT") or ""
+        if system_prompt == "":
+            raise Exception("SYSTEM_PROMPT is empty")
 
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
         # Séparer le nom du message
-        utilisateur = message.split(" - ")[0]
-        message = message.split(" - ")[1]
+        utilisateur = message.split(" : ", maxsplit=2)[1]
         if utilisateur.lower() == "cegep-bot":
+            message = message.split(" : ", maxsplit=2)[2]
             messages_formated.append({"role": "assistant", "content": message})
+        elif utilisateur.lower() == "system":
+            message = message.split(" : ", maxsplit=2)[2]
+            messages_formated.append({"role": "system", "content": message})
         else:
             messages_formated.append({"role": "user", "content": message})
 
@@ -258,7 +276,6 @@ async def messages_formater(messages):
 
 
 async def get_completion(messages, temperature=0.8, origine=None):
-    messages = await messages_formater(messages)
     print("get_completion, messages : ")
     print(messages)
 
@@ -312,12 +329,40 @@ async def get_completion(messages, temperature=0.8, origine=None):
 
 
 async def trigger_jarvis(message):
-    # Chercher les (10) derniers messages
     messages = []
-    async for msg in message.channel.history(limit=5):
-        contenu = msg.author.name + " - " + msg.content
+    if (message.reference is not None):
+        message_resolved = await message.channel.fetch_message(message.reference.message_id)
+        heure = message.reference.resolved.created_at
+        heure_montreal = heure.astimezone(pytz.timezone('America/Montreal'))
+        contenu = "SYSTEM : system : L'utilisateur en question fait référence au message suivant -> \"" \
+                  + message_resolved.content + "\" écrit par \"" \
+                  + message_resolved.author.name + "\" le " \
+                  + message_resolved.created_at.strftime("%d/%m/%Y à %H:%M:%S")
+        contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
+
+    # Chercher les (10) derniers messages
+    async for msg in message.channel.history(limit=10):
+        contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " à écrit : " + msg.content
+        contenu = contenu.replace("CEGEP-BOT", "Jarvis")
+        messages.append(contenu + "\n")
+
+        if (msg.reference is not None):
+            message_resolved = await msg.channel.fetch_message(msg.reference.message_id)
+            contenu = "SYSTEM : system : Le message SUIVANT est en réponse à ce message -> \"" \
+                      + message_resolved.content + "\" écrit par \"" \
+                      + message_resolved.author.name + "\""
+            contenu = contenu.replace("CEGEP-BOT", "Jarvis")
+            messages.append(contenu + "\n")
     print(messages)
+
+    # Si le channel est le salon "id_salons_jarvis_testeur"
+    if message.channel == client.get_channel(salons['id_salon_jarvis_testeur']):
+        global prompt_test
+        print("prompt test : " + prompt_test)
+        messages = await messages_formater(messages, prompt_test)
+    else:
+        messages = await messages_formater(messages)
     await get_completion(messages, 0.8, message)
 
 

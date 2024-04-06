@@ -113,7 +113,7 @@ async def on_raw_reaction_add(payload):
                 channel = client.get_channel(salons['id_salon_achievements'])
                 await channel.send(f"L'achievement {role_1984.mention} a été découvert par {user.mention} !")
 
-    elif payload.channel_id == salons['id_salons_roles'] and payload.emoji.name == "💚":
+    elif payload.channel_id == salons['id_salon_roles'] and payload.emoji.name == "💚":
         user = payload.member
         role = discord.utils.get(user.guild.roles, id=roles['student'])
         await user.add_roles(role)
@@ -224,6 +224,11 @@ async def on_message(message):
     dots = ""
     if len(message.content) > 50:
         dots = "[...]"
+
+    if (message.reference is not None):
+        print("-> En réponse à : " + str(
+            message.reference.resolved.author) + " : " + message.reference.resolved.content)
+
     print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " "
           + str(message.author) + " : " + message.content[:50] + dots)
     if message.author == client.user:
