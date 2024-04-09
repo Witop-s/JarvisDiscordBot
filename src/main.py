@@ -2,29 +2,39 @@
 # https://discordpy.readthedocs.io/en/stable/quickstart.html#a-minimal-bot
 import json
 import os
-import discord
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import time
+
+from discord import default_permissions
 from pytz import timezone
 
-import commands
+import discord
+from discord.ext import commands
+
+from src import bot_commands
+from src import minecraft
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+# bot = commands.Bot(command_prefix='$', intents=intents)
+bot = discord.Bot(intents=intents)
 
-client = discord.Client(intents=intents)
+# bot = discord.bot(intents=intents)
+# ot = discord.Bot(command_prefix='/', intents=intents)
 
-with open('salons.json') as f:
+
+with open('src/salons.json') as f:
     salons = json.load(f)
 
-with open('roles.json') as f:
+with open('src/roles.json') as f:
     roles = json.load(f)
 
-with open('achievements.json') as f:
+with open('src/achievements.json') as f:
     achievements = json.load(f)
 
-with open('misc.json') as f:
+with open('src/misc.json') as f:
     misc = json.load(f)
 
 reponse_jarvis = ""
@@ -81,11 +91,11 @@ async def get_role_from_payload(payload, user):
         return discord.utils.get(user.guild.roles, id=roles['LGBT'])
     elif payload.emoji.name == "🌈":
         return discord.utils.get(user.guild.roles, id=roles['Soutien_LGBT'])
-    else :
+    else:
         return None
 
 
-@client.event
+@bot.event
 async def on_raw_reaction_add(payload):
     print("on_raw_reaction_add : " + payload.emoji.name + " " + str(payload.channel_id))
     # Vérifiez si la réaction a été ajoutée dans le salon spécifique
@@ -110,7 +120,7 @@ async def on_raw_reaction_add(payload):
                     already_found = True
             await user.add_roles(role_1984)
             if not already_found:
-                channel = client.get_channel(salons['id_salon_achievements'])
+                channel = bot.get_channel(salons['id_salon_achievements'])
                 await channel.send(f"L'achievement {role_1984.mention} a été découvert par {user.mention} !")
 
     elif payload.channel_id == salons['id_salon_roles'] and payload.emoji.name == "💚":
@@ -144,11 +154,11 @@ async def on_raw_reaction_add(payload):
         await user.add_roles(role)
 
 
-@client.event
+@bot.event
 async def on_raw_reaction_remove(payload):
     print("on_raw_reaction_remove")
 
-    guild = client.get_guild(payload.guild_id)
+    guild = bot.get_guild(payload.guild_id)
     user = guild.get_member(payload.user_id)
     # Vérifiez si la réaction a été ajoutée dans le salon spécifique
     if payload.channel_id == salons['id_salon_film'] and payload.emoji.name == "🔔":
@@ -180,13 +190,13 @@ async def on_raw_reaction_remove(payload):
         await user.remove_roles(role)
 
 
-@client.event
+@bot.event
 async def on_member_join(member):
     print("on_member_join")
     # Récuperer le channel
-    channel = client.get_channel(salons['id_salon_bienvenue'])
-    channel_rules = client.get_channel(salons['id_salon_rules'])
-    channel_suggestion = client.get_channel(salons['id_salon_suggestion'])
+    channel = bot.get_channel(salons['id_salon_bienvenue'])
+    channel_rules = bot.get_channel(salons['id_salon_rules'])
+    channel_suggestion = bot.get_channel(salons['id_salon_suggestion'])
 
     old_message = f"Salut {member.mention}, bienvenue sur le serveur !"
     old_message += "\n" + (
@@ -203,38 +213,39 @@ async def on_member_join(member):
     await channel.send(new_message)
 
 
-@client.event
+@bot.event
 async def on_ready():
-    print('We have logged in as {0.user}'.format(client))
+    print('We have logged in as {0.user}'.format(bot))
     # await check_films()
     # schedule pour exécuter la fonction check_films tous les jeudi à 12h
     eastern_tz = timezone('US/Eastern')
     scheduler.configure(timezone=eastern_tz)
 
-    scheduler.add_job(commands.check_films, 'cron', day_of_week='thu', hour=12, minute=0, second=0)
+    scheduler.add_job(bot_commands.check_films, 'cron', day_of_week='thu', hour=12, minute=0, second=0)
     # Toute les 15 minutes, print logs
     scheduler.add_job(printLogJarvis, 'cron', hour='*/1', minute=0, second=0)
     scheduler.start()
 
-    await commands.exporter(client, salons, roles, achievements, misc, scheduler, openai_token)
+    await bot_commands.importer(bot, salons, roles, achievements, misc, scheduler, openai_token)
+    await minecraft.importer(bot)
 
 
-@client.event
+@bot.event
 async def on_message(message):
     dots = ""
     if len(message.content) > 50:
         dots = "[...]"
 
-    if (message.reference is not None):
+    if message.reference is not None:
         print("-> En réponse à : " + str(
             message.reference.resolved.author) + " : " + message.reference.resolved.content)
 
     print("on_message " + str(time.localtime().tm_hour) + "h" + str(time.localtime().tm_min) + " "
           + str(message.author) + " : " + message.content[:50] + dots)
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
-    await commands.commands_manager(message)
+    await bot_commands.commands_manager(message)
 
     # Si le message a été envoyé entre 2h et 5h du matin
     if 2 <= time.localtime().tm_hour < 5:
@@ -250,7 +261,7 @@ async def on_message(message):
         # Ajouter l'achievement "night owl"
         await message.author.add_roles(message.guild.get_role(achievements['night_owl_id']))
         if not already_found:
-            channel = client.get_channel(salons['id_salon_achievements'])
+            channel = bot.get_channel(salons['id_salon_achievements'])
             role_night_owl = discord.utils.get(message.guild.roles, id=achievements['night_owl_id'])
             await channel.send(f"L'achievement {role_night_owl.mention} a été découvert par {message.author.mention} !")
 
@@ -267,37 +278,34 @@ async def on_message(message):
         # Ajouter l'achievement "early bird"
         await message.author.add_roles(message.guild.get_role(achievements['early_bird_id']))
         if not already_found:
-            channel = client.get_channel(salons['id_salon_achievements'])
+            channel = bot.get_channel(salons['id_salon_achievements'])
             role_early_bird = discord.utils.get(message.guild.roles, id=roles['early_bird_id'])
             await channel.send(
                 f"L'achievement {role_early_bird.mention} a été découvert par {message.author.mention} !")
 
-@client.event
-async def on_failure(urlrequest, reponse_content, origine):
-    print("on_failure")
-    commands.request_failure(urlrequest, reponse_content, origine)
-
-
-@client.event
-async def on_success(urlrequest, reponse_content, origine):
-    print("on_success")
-    commands.request_success(urlrequest, reponse_content, origine)
+    # await bot.process_commands(message)
 
 
 async def printLogJarvis():
     print("printLogJarvis")
-    channel = client.get_channel(salons['id_salon_jarvis_logs'])
+    channel = bot.get_channel(salons['id_salon_jarvis_logs'])
     # Time + ping + "Jarvis online"
     log = "[" + time.strftime("%H:%M:%S", time.localtime()) + "] - " + str(
-        round(client.latency, 2)) + "ms" + " Jarvis up"
+        round(bot.latency, 2)) + "ms" + " Jarvis up"
     await channel.send(log)
 
+
+@bot.command(description="Rejoignez le serveur Minecraft !")
+async def joinsmp(ctx, pseudo_minecraft: str):
+    await minecraft.join_request(ctx, pseudo_minecraft)
+
+#await minecraft.joinrequest(ctx, pseudo_minecraft, faction)
 
 try:
     token = os.getenv("TOKEN") or ""
     if token == "":
         raise Exception("No discord token found")
-    client.run(token)
+    bot.run(token)
 except discord.HTTPException as e:
     if e.status == 429:
         print(
