@@ -13,6 +13,7 @@ with open('src/salons.json') as f:
 with open('src/roles.json') as f:
     roles = json.load(f)
 
+
 async def importer(vBot):
     global bot
     bot = vBot
@@ -22,20 +23,20 @@ async def get_player_id(username: str) -> int:
     async with aiohttp.ClientSession() as session:
         url = f"https://api.minecraftservices.com/minecraft/profile/lookup/name/{username}"
         async with session.get(url) as response:
+            try:
+                response.raise_for_status()
+            except aiohttp.ClientResponseError:
+                return 0
             return (await response.json())["id"]
 
 
 async def get_player_skin(username: str) -> str:
     async with aiohttp.ClientSession() as session:
-        url = f"https://mineskin.eu/armor/body/{await get_player_id(username)}/50.png"
+        player_id = await get_player_id(username)
+        if player_id == 0:
+            return "https://mineskin.eu/armor/body/Steve/50.png"
+        url = f"https://mineskin.eu/armor/body/{player_id}/50.png"
         return url
-
-
-async def register_user(ctx, username: str) -> str:
-    player_id = await get_player_id(username)
-    player_head = await get_player_skin(username)
-    print(player_id, player_head)
-    await ctx.send(f"Player ID: {player_id}\nPlayer Head: {player_head}")
 
 
 class AcceptDenyView(View):
@@ -66,42 +67,52 @@ async def add_role_minecraft(interaction: discord.Interaction, role: discord.Rol
     # Send a confirmation message
     await interaction.response.send_message(f"{member.mention}, tu as rejoint la faction {role.name} !")
 
-async def edit_join_request(interaction: discord.Interaction, role: discord.Role):
+
+async def edit_join_request(interaction: discord.Interaction, role: discord.Role, skin_url: str, ctx):
     # Get the member who clicked the button
     member = interaction.user
 
-    # Send a confirmation message
-    await interaction.response.send_message(
-        f"{member.mention}, ta demande a bien été prise en compte. Tu seras averti dès que tu auras été ajouté à la whitelist.")
-
-    # Edit the original message to show that the request has been processed
-    message = await interaction.original_response()
-    embed = message.embeds[0]
-    embed.set_footer(text=f"{member.name} a rejoint la faction {role.name} !")
+    # Get the original message sent by the bot
+    message = await ctx.channel.fetch_message(interaction.message.id)
+    embed = discord.Embed(title="Join Request",
+                          description=f"C'est tout bon {member} ! Une fois ta demande acceptée, "
+                                      f"tu pourras rejoindre le serveur SMP sous le pseudo "
+                                      f"\"{message.embeds[0].title}\" en tant que {role.mention}.",
+                          color=discord.Color.blue())
+    embed.set_thumbnail(url=skin_url)
+    embed.set_footer(text="... En attente de validation ...")
     await message.edit(embed=embed, view=None)
 
+
 async def join_request(ctx, pseudo_minecraft: str):
+    # Si le joueur a déjà un des 2 rôles, on refuse la demande
+    role_pacifiste = discord.utils.get(ctx.guild.roles, id=roles["pacifiste"])
+    role_survivant = discord.utils.get(ctx.guild.roles, id=roles["survivant"])
+    if role_pacifiste in ctx.author.roles or role_survivant in ctx.author.roles:
+        await ctx.send(
+            f"{ctx.author.mention}, tu as déjà rejoint le serveur SMP. Si tu veux changer de faction, contacte un modérateur.")
+        return
+
     skin_url = await get_player_skin(pseudo_minecraft)
     message = f"Salut {ctx.author.mention}, tu veux rejoindre le serveur SMP avec le pseudo Minecraft \"{pseudo_minecraft}\"."
     embed = discord.Embed(title="Join Request", description=message, color=discord.Color.blue())
     embed.set_thumbnail(url=skin_url)
     embed.set_footer(text="Choisis ta faction pour commencer l'aventure !")
-    role_pacifiste = discord.utils.get(ctx.guild.roles, id=roles["pacifiste"])
-    role_survivant = discord.utils.get(ctx.guild.roles, id=roles["survivant"])
-    print(role_pacifiste, role_survivant)
 
     # Create a View instance with a timeout of 3 minutes
     view = discord.ui.View(timeout=180.0)
 
     # Create a Button instance for the Pacifiste role
     pacifiste_button = discord.ui.Button(label="Pacifiste", style=discord.ButtonStyle.blurple, custom_id="pacifiste")
-    pacifiste_button.callback = lambda interaction: edit_join_request(interaction, role_pacifiste)
+    pacifiste_button.callback = lambda interaction: edit_join_request(interaction, role_pacifiste, skin_url, ctx)
     view.add_item(pacifiste_button)
 
     # Create a Button instance for the Survivant role
     survivant_button = discord.ui.Button(label="Survivant", style=discord.ButtonStyle.green, custom_id="survivant")
-    survivant_button.callback = lambda interaction: edit_join_request(interaction, role_survivant)
+    survivant_button.callback = lambda interaction: edit_join_request(interaction, role_survivant, skin_url, ctx)
     view.add_item(survivant_button)
+
+    print(embed.to_dict())
 
     await ctx.send(embed=embed, view=view)
 

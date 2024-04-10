@@ -236,7 +236,7 @@ async def on_message(message):
     if len(message.content) > 50:
         dots = "[...]"
 
-    if message.reference is not None:
+    if message.reference is not None and message.reference.resolved is not None:
         print("-> En réponse à : " + str(
             message.reference.resolved.author) + " : " + message.reference.resolved.content)
 
