@@ -44,7 +44,8 @@ async def importer(vClient, vSalons, vRoles, vAchievements, vMisc, vScheduler, v
 
 
 async def commands_manager(message):
-    print("commands_manager : " + message.content)
+    #print("commands_manager : " + message.content)
+    print("commands_manager")
     if message.content.startswith("/kill") and message.author.guild_permissions.administrator:
         exit(0)
 

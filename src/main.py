@@ -195,20 +195,8 @@ async def on_member_join(member):
     print("on_member_join")
     # Récuperer le channel
     channel = bot.get_channel(salons['id_salon_bienvenue'])
-    channel_rules = bot.get_channel(salons['id_salon_rules'])
-    channel_suggestion = bot.get_channel(salons['id_salon_suggestion'])
-
-    old_message = f"Salut {member.mention}, bienvenue sur le serveur !"
-    old_message += "\n" + (
-            f"Pour commencer, je t'invite à lire les règles du serveur dans le salon {channel_rules.mention}"
-            f", promis ça sera pas long ! :wink:" + "\n" + "Ensuite, tu pourras récupérer un rôle et accéder "
-                                                           "aux autres salons :tada: !")
 
     new_message = f"Salut {member.mention}, bienvenue sur le serveur !"
-    new_message += "\n" + (f"Je me présente : Jarvis, je suis le bot custom du serveur, je n'ai pas encore beaucoup "
-                           "de fonctionnalités mais je suis encore en développement ! Donc si tu as des idées, "
-                           f"n'hésite pas à les partager {channel_suggestion.mention} ! En attendant, je t'invite à "
-                           f"suivre les instructions laissé par {member.guild.get_member(misc['dino_bot_id']).mention}")
 
     await channel.send(new_message)
 
