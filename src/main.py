@@ -51,7 +51,7 @@ except Exception as e:
     exit(1)
 
 
-async def get_role_from_payload(payload, user):
+def get_role_from_payload(payload, user):
     if payload.emoji.name == "💻":
         return discord.utils.get(user.guild.roles, id=roles['informatique'])
     elif payload.emoji.name == "📁":
