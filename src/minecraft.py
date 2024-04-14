@@ -16,6 +16,7 @@ with open('src/roles.json') as f:
 
 
 async def importer(vBot):
+    print("Importation vers minecraft.py")
     global bot
     bot = vBot
 
@@ -71,8 +72,8 @@ async def add_role_minecraft(interaction: discord.Interaction, role: discord.Rol
     await interaction.response.send_message(f"{member.mention}, tu as rejoint la faction {role.name} !")
 
 
-async def edit_join_request(interaction: discord.Interaction, role: discord.Role, ctx, skin_url: str,
-                            pseudo_minecraft: str):
+async def callback_join_request(interaction: discord.Interaction, role: discord.Role, ctx, skin_url: str,
+                                pseudo_minecraft: str):
     # Get the member who clicked the button
     member = interaction.user
 
@@ -92,7 +93,7 @@ async def edit_join_request(interaction: discord.Interaction, role: discord.Role
     embed.set_footer(text="... En attente de validation ...")
     await message.edit(embed=embed, view=None)
 
-    await admin_confirm_join(ctx, pseudo_minecraft, role)  # Attendre la confirmation d'un admin
+    await admin_confirm_join(ctx, pseudo_minecraft, role, interaction)  # Attendre la confirmation d'un admin
 
 
 async def join_request(ctx, pseudo_minecraft: str):
@@ -148,15 +149,15 @@ async def join_request(ctx, pseudo_minecraft: str):
 
     # Create a Button instance for the Pacifiste role
     pacifiste_button = discord.ui.Button(label="Pacifiste", style=discord.ButtonStyle.blurple, custom_id="pacifiste")
-    pacifiste_button.callback = lambda interaction: edit_join_request(interaction, role_pacifiste, ctx, skin_url,
-                                                                      pseudo_minecraft)
+    pacifiste_button.callback = lambda interaction: callback_join_request(interaction, role_pacifiste, ctx, skin_url,
+                                                                          pseudo_minecraft)
     if not error:
         view.add_item(pacifiste_button)
 
     # Create a Button instance for the Survivant role
     survivant_button = discord.ui.Button(label="Survivant", style=discord.ButtonStyle.green, custom_id="survivant")
-    survivant_button.callback = lambda interaction: edit_join_request(interaction, role_survivant, ctx, skin_url,
-                                                                      pseudo_minecraft)
+    survivant_button.callback = lambda interaction: callback_join_request(interaction, role_survivant, ctx, skin_url,
+                                                                          pseudo_minecraft)
     if not error:
         view.add_item(survivant_button)
 
@@ -165,12 +166,56 @@ async def join_request(ctx, pseudo_minecraft: str):
     await ctx.send(embed=embed, view=view)
 
 
-async def edit_admin_confirm_join(interaction: discord.Interaction, ctx, pseudo_minecraft: str, faction: discord.Role):
+async def modify_origin(ctx, origin: discord.Interaction, accept: bool, faction: discord.Role, skin_url: str):
+    # Get the original message sent by the bot
+    message = await ctx.channel.fetch_message(origin.message.id)
+    user = ctx.author.mention
+    response = "acceptée" if accept else "refusée"
+    color = discord.Color.green() if accept else discord.Color.red()
+    embed = discord.Embed(title="Join Request", description=f"{user} ta demande pour rejoindre le serveur en tant que "
+                                                            f"{faction.mention} a été {response}.", color=color)
+    embed.set_thumbnail(url=skin_url)
+    footer = f"IP: 24.122.62.44" if accept else "Contacte un modérateur pour plus d'informations."
+    embed.set_footer(text=footer)
+    await message.edit(embed=embed, view=None)
+
+
+async def callback_admin_confirm_join(interaction: discord.Interaction, ctx, channel, pseudo_minecraft: str,
+                                      faction: discord.Role, skin_url: str, origin: discord.Interaction, accept: bool):
     # Ici il faudra editer le message de confirmation admin, ainsi que le message original de la demande
-    return # TODO
+    # Get the original message sent by the bot
+    response = "acceptée" if accept else "refusée"
+    color = discord.Color.green() if accept else discord.Color.red()
+    message = await channel.fetch_message(interaction.message.id)
+    nouveau_message = (f"{interaction.user.mention} a {response} la demande de {ctx.author.mention} pour rejoindre le "
+                       f"serveur SMP sous le pseudo {pseudo_minecraft} et la faction {faction.mention}.")
+    embed = discord.Embed(title="Join Request", description=nouveau_message, color=color)
+    embed.set_thumbnail(url=skin_url)
+    embed.set_footer(text=f"Demande {response}")
+    await message.edit(embed=embed, view=None)
+    await modify_origin(ctx, origin, accept, faction, skin_url)
+
+    if not accept:
+        return
+
+    await interaction.user.add_roles(faction)
+    if not accept:
+        return
+
+    try:
+        dm_channel = await ctx.author.create_dm()
+    except discord.Forbidden:
+        print(f"Impossible d'envoyer un message privé à {ctx.author.name}.")
+        return
+
+    message = (f"Salut {ctx.author.mention} ! Ta demande a été acceptée pour rejoindre le serveur SMP en tant que "
+               f"{faction.name}. Tu peux rejoindre le serveur avec l'IP : ```TXT\n24.122.62.44```")
+    await dm_channel.send(message)
+    await (discord.utils.get(ctx.guild.text_channels, id=salons["server_console"])
+           .send(f"whitelist add {pseudo_minecraft}"))
 
 
-async def admin_confirm_join(ctx, pseudo_minecraft: str, faction: discord.Role):
+async def admin_confirm_join(ctx, pseudo_minecraft: str, faction: discord.Role, origin):
     skin_dict = await get_player_skin(pseudo_minecraft)
     skin_url = skin_dict["url"]
     message = (f"{ctx.author.mention} veux rejoindre le serveur SMP sous le pseudo "
@@ -178,22 +223,24 @@ async def admin_confirm_join(ctx, pseudo_minecraft: str, faction: discord.Role):
     embed = discord.Embed(title="Join Request", description=message, color=discord.Color.blue())
     embed.set_thumbnail(url=skin_url)
     embed.set_footer(text="Cliquer sur les boutons pour accepter ou refuser la demande.")
-    #view = AcceptDenyView()
+    # view = AcceptDenyView()
 
     view = discord.ui.View()
+    channel = bot.get_channel(salons["join_requests"])
     accept_button = discord.ui.Button(label="Accepter", style=discord.ButtonStyle.green)
-    accept_button.callback = lambda interaction: edit_admin_confirm_join(interaction, ctx, pseudo_minecraft, faction)
+    accept_button.callback = lambda interaction: (
+        callback_admin_confirm_join(interaction, ctx, channel, pseudo_minecraft, faction, skin_url, origin, True))
     view.add_item(accept_button)
 
     deny_button = discord.ui.Button(label="Refuser", style=discord.ButtonStyle.red)
-    deny_button.callback = lambda interaction: edit_admin_confirm_join(interaction, ctx, pseudo_minecraft, faction)
+    deny_button.callback = lambda interaction: (
+        callback_admin_confirm_join(interaction, ctx, channel, pseudo_minecraft, faction, skin_url, origin, False))
     view.add_item(deny_button)
 
     # Salon de validation des demandes
-    channel = ctx.guild.get_channel(salons["id_salon_join_requests"])
+    channel = ctx.guild.get_channel(salons["join_requests"])
     print(channel)
     await channel.send(embed=embed, view=view)
-
 
 # @bot.command(description="Sends the bot's latency.")  # this decorator makes a slash command
 # async def ping(ctx):  # a slash command will be created with the name "ping"

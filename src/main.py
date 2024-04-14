@@ -217,6 +217,9 @@ async def on_ready():
     await bot_commands.importer(bot, salons, roles, achievements, misc, scheduler, openai_token)
     await minecraft.importer(bot)
 
+    # change the bot's name
+    await bot.user.edit(username="Jarvis")
+
 
 @bot.event
 async def on_message(message):
