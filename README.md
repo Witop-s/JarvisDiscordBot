@@ -57,6 +57,9 @@ python /home/username/JarvisDiscordBot/bot/src/main.py
 # Détacher la session
 ctrl-a d
 
+# Désactiver l'environnement
+deactivate
+
 # Se reconecter à la session
 screen -r JarvisSession
 
