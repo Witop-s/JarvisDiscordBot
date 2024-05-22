@@ -36,13 +36,28 @@ python3 -m pip install requests==2.31.0
 python3 -m pip install pdf2image==1.17.0
 python3 -m pip install selenium==4.19.0
 python3 -m pip install feedparser==6.0.11
+python3 -m pip install python-dotenv
+
 
 # Cloner le dépôt GitHub
 git clone https://github.com/Witop-s/JarvisDiscordBot.git /home/username/JarvisDiscordBot/bot
 
-nano /home/username/JarvisDiscordBot/.env
+# Exporter le répertoire source
+export PYTHONPATH=/home/username/JarvisDiscordBot/bot/src:$PYTHONPATH
+
+nano /home/username/JarvisDiscordBot/bot/src/.env
   OPENAI=[clé open ai];
   PYTHONBUFFERED=1;
   SYSTEM_PROMPT=[prompt système pour jarvis];
+
+# Host le bot
+screen -S JarvisSession
+python /home/username/JarvisDiscordBot/bot/src/main.py
+
+# Détacher la session
+ctrl-a d
+
+# Se reconecter à la session
+screen -r JarvisSession
 
 ```
