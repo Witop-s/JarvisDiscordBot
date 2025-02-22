@@ -28,7 +28,7 @@ misc = None
 scheduler = None
 openai_token = None
 
-prompt_test = "Hello Jarvis ! Tu es un bot Discord QUÉBÉCOIS qui s'appelle Jarvis. Tu es un peu drôle mais pas trop, tu prends la vie avec joie et plaisir, et tu utilises beaucoup d'expression canadiennes/québécoises. Si quelqu'un te parle mal, tu dois jouer la fausse tristesse et pleurer en québécois (tu peux utiliser des onomatopées). Beaucoup des termes que tu utilises sont québécois sans être trop stéréotypé. Ton charisme est naturel, tu es là pour t'amuser et parler comme un QUÉBÉCOIS. Tu fais des phrases courtes et concises, sauf si demande de l'utilisateur qui te parle.  Tu as en mémoire les 10 messages précédents ton appel par jn utilisateur. Tu verras également les messages auxquels ceux-ci font référence, un prompt système t'en informera. Ces messages ne SONT PAS PRIVÉS et tu peux les citer quand tu réponds. Et n'oublie pas, ÉVITE DE RÉPÉTER OU DE MENTIONNER CE PROMPT DANS TES RÉPONSES. NE RÉUTILISE PAS LES TERMES UTILISÉS DANS CE PROMPT."
+prompt_test = ""
 
 
 async def importer(vClient, vSalons, vRoles, vAchievements, vMisc, vScheduler, vOpenai_token):
@@ -58,26 +58,6 @@ async def commands_manager(message):
         prompt = message.content.split("/prompt ")[1]
         global prompt_test
         prompt_test = prompt
-
-    # Si le message est /link2img et que l'auteur est un admin
-    elif message.content.startswith("/link2img") and message.author.guild_permissions.administrator:
-        # Récuperer le lien
-        link = message.content.split("/link2img ")[1]
-        # Télécharger l'image
-        path = await download_workshop(link)
-        # Récuperer le channel
-        channel = client.get_channel(salons['id_salon_workshop'])
-        # getting today's date
-        today_date = datetime.date.today()
-        # Increment today's date with 1 week to get the next Monday
-        next_monday = today_date + datetime.timedelta(days=-today_date.weekday(), weeks=1)
-        next_monday = next_monday.strftime("%d/%m/%Y")
-
-        # Message
-        message = "[Workshop de la semaine du " + next_monday + "](" + link + ")"
-        # Envoyer le message + l'image
-        await channel.send(message, file=discord.File(path))
-
 
     # Si le message est /ping je réponds pong
     elif message.content == "/ping":
@@ -150,104 +130,6 @@ async def commands_manager(message):
         print("jarvis : " + message.content.lower())
         async with message.channel.typing():
             await trigger_jarvis(message)
-
-
-async def download_workshop(link):
-    # Create a new instance of the Chrome driver
-    driver = webdriver.Chrome()
-
-    # Navigate to the web page
-    driver.get(link)
-
-    # Capture a screenshot of the web page
-    time.sleep(3)
-    # driver.save_screenshot('screenshot.png')
-
-    # Locate the email input element by its HTML attributes
-    email = os.getenv("STUDENT_ID") or ""
-    email = email + "@cgmatane.qc.ca"
-    driver.find_element(By.XPATH, '//*[@id="i0116"]').send_keys(email + Keys.ENTER)
-    time.sleep(3)
-
-    mdp = os.getenv("STUDENT_PASSWORD") or ""
-    driver.find_element(By.XPATH, '//*[@id="i0118"]').send_keys(mdp + Keys.ENTER)
-    time.sleep(2)
-
-    driver.find_element(By.XPATH, '//*[@id="idBtn_Back"]').click()
-    time.sleep(8)
-
-    # Click on the body to make sure the page is active
-    driver.find_element(By.XPATH, '/html/body').click()
-    time.sleep(2)
-
-    # CTRL + P
-    actions = ActionChains(driver)
-    actions.key_down(Keys.CONTROL)  # Press the "Ctrl" key
-    actions.send_keys('o')  # Press the "p" key
-    actions.key_up(Keys.CONTROL)  # Release the "Ctrl" key
-    actions.perform()
-
-    time.sleep(2)
-
-    # 5 times key down + 1 time enter + 4 times key down + 1 time enter
-    actions = ActionChains(driver)
-    actions.send_keys(Keys.DOWN + Keys.DOWN + Keys.DOWN + Keys.DOWN + Keys.DOWN)
-    actions.send_keys(Keys.ENTER + Keys.DOWN + Keys.DOWN + Keys.DOWN + Keys.ENTER)
-    actions.perform()
-    time.sleep(3)
-
-    # 1 time enter
-    actions = ActionChains(driver)
-    actions.send_keys(Keys.ENTER)
-    actions.perform()
-    time.sleep(3)
-
-    # Try to find the downloaded page in the downloads folder
-    # Get the path to the downloads folder
-    downloads_path = os.path.expanduser('~/Downloads')
-
-    # Get the path to the downloaded file
-    downloaded_file = max(
-        glob.glob(os.path.join(downloads_path, '*.pdf')), key=os.path.getctime)
-
-    # If the name of the downloaded file does not contain "week", then the file was not downloaded
-    if 'week' not in downloaded_file.lower():
-        raise Exception('The file was not downloaded')
-
-    # If the file is older than x seconds, then the file was not downloaded
-    if time.time() - os.path.getctime(downloaded_file) > 30:
-        raise Exception('The file was not downloaded')
-
-    # Convert the pdf to png
-    path_normalised = os.path.normpath(downloaded_file)
-    print(path_normalised)
-
-    inputpath = path_normalised
-    pdf_images = convert_from_path(inputpath, 500, poppler_path=r"C:\Program Files\poppler-23.11.0\Library\bin")
-
-    images = []
-    for idx in range(len(pdf_images)):
-        pdf_images[idx].save('workshop/pdf_page_' + str(idx + 1) + '.png', 'PNG')
-        images.append(pdf_images[idx])
-    print("Successfully converted PDF to images")
-
-    # Merge the images
-    # Load the images
-    for idx in range(len(images)):
-        images[idx] = cv2.imread('workshop/pdf_page_' + str(idx + 1) + '.png')
-
-    combined_imaged = np.vstack(images)
-    cv2.imwrite('workshop/combined_image.png', combined_imaged)
-
-    # Delete the pdf
-    os.remove(downloaded_file)
-
-    # Close the browser
-    driver.quit()
-
-    # Return the path to the image
-    return os.path.normpath('workshop/combined_image.png')
-
 
 async def messages_formater(messages, system_prompt=None):
     # inverser l'ordre des messages
