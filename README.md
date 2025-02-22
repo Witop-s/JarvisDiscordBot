@@ -38,6 +38,7 @@ nano /home/username/JarvisDiscordBot/bot/src/.env
   OPENAI=[clé open ai];
   PYTHONBUFFERED=1;
   SYSTEM_PROMPT=[prompt système pour jarvis];
+  TOKEN=[token de votre propre bot discord de tests, voir le discord dev portal pour ça]
 
 # Note : si vous avez une erreur par rapport à l'import de bot_commands et minecraft, il faudra peut-être rajouter "from src import" au lieu de juste "import ..."
 # Idéalement ce problème devrait être réglé dans le futur
