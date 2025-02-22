@@ -1,6 +1,8 @@
 services:
   discord-bot:
-    build: .
+    build:
+      context: .
+      network: host
     environment:
       - TOKEN=${TOKEN}
       - OPENAI=${OPENAI}
