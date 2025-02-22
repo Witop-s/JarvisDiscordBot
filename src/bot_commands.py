@@ -7,14 +7,11 @@ import feedparser
 import html
 from bs4 import BeautifulSoup
 
-import cv2
 import discord
-import numpy as np
 import time
 import pytz
 
 import requests
-from pdf2image import convert_from_path
 
 from selenium import webdriver
 from selenium.webdriver import Keys, ActionChains

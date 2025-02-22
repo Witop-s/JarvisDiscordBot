@@ -1,0 +1,9 @@
+services:
+  discord-bot:
+    build: .
+    environment:
+      - TOKEN=${TOKEN}
+      - OPENAI=${OPENAI}
+    volumes:
+      - .:/app
+    restart: always

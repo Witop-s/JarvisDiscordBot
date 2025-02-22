@@ -12,8 +12,8 @@ from pytz import timezone
 import discord
 from discord.ext import commands
 
-from src import bot_commands
-from src import minecraft
+import bot_commands
+import minecraft
 
 intents = discord.Intents.default()
 intents.message_content = True
