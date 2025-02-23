@@ -204,6 +204,9 @@ async def on_member_join(member):
 @bot.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(bot))
+
+    await bot.change_presence(activity=discord.Game(name="Bing chilling"))
+
     # await check_films()
     # schedule pour exécuter la fonction check_films tous les jeudi à 12h
     eastern_tz = timezone('US/Eastern')
