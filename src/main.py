@@ -293,11 +293,6 @@ async def printLogJarvis():
 async def joinsmp(ctx, pseudo_minecraft: str):
     await minecraft.join_request(ctx, pseudo_minecraft)
 
-@bot.command(description="Quand Jarvis ne répond pas")
-async def jaaarvis(ctx):
-    async with ctx.channel.typing():
-        await bot_commands.trigger_jarvis(ctx)
-
 #await minecraft.joinrequest(ctx, pseudo_minecraft, faction)
 
 try:
