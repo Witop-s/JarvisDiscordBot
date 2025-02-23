@@ -210,7 +210,7 @@ async def get_completion(messages, temperature=0.8, origine=None):
 
 async def trigger_jarvis(message):
     messages = []
-    if (message.reference is not None):
+    if (message and message.reference is not None):
         message_resolved = await message.channel.fetch_message(message.reference.message_id)
         heure = message.reference.resolved.created_at
         heure_montreal = heure.astimezone(pytz.timezone('America/Montreal'))
