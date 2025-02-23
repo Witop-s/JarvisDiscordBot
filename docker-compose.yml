@@ -1,11 +1,11 @@
 services:
   discord-bot:
-    build:
-      context: .
-      network: host
+    build: .
     environment:
       - TOKEN=${TOKEN}
       - OPENAI=${OPENAI}
+      - SYSTEM_PROMPT=${SYSTEM_PROMPT}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     volumes:
       - .:/app
     restart: always
