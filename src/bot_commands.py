@@ -223,6 +223,9 @@ async def trigger_jarvis(message):
 
     # Chercher les (10) derniers messages
     async for msg in message.channel.history(limit=10):
+        if msg.content.start.startswith("/jarjarclearmemory"):
+            break
+
         contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " à écrit : " + msg.content
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
