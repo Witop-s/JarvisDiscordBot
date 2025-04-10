@@ -221,22 +221,26 @@ async def trigger_jarvis(message):
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
 
-    # Chercher les (10) derniers messages
+    messages_temp = []
+    # Lire les messages du plus récent au plus ancien
     async for msg in message.channel.history(limit=10):
-        if msg.content.start.startswith("/jarjarclearmemory"):
+        if msg.content.startswith("/jarjarclearmemory"):
             break
 
-        contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " à écrit : " + msg.content
+        contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " a écrit : " + msg.content
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
-        messages.append(contenu + "\n")
+        messages_temp.append(contenu + "\n")
 
-        if (msg.reference is not None):
+        if msg.reference is not None:
             message_resolved = await msg.channel.fetch_message(msg.reference.message_id)
             contenu = "SYSTEM : system : Le message SUIVANT est en réponse à ce message -> \"" \
                       + message_resolved.content + "\" écrit par \"" \
                       + message_resolved.author.name + "\""
             contenu = contenu.replace("CEGEP-BOT", "Jarvis")
-            messages.append(contenu + "\n")
+            messages_temp.append(contenu + "\n")
+
+    # Inverser pour avoir du plus ancien au plus récent
+    messages = list(reversed(messages_temp))
     print(messages)
 
     # Si le channel est le salon "id_salons_jarvis_testeur"
