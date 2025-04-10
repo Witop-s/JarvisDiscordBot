@@ -227,7 +227,6 @@ async def trigger_jarvis(message):
     async for msg in message.channel.history(limit=10):
         messages_raw.append(msg)
 
-    messages_raw.reverse()
     messages_to_process = []
     for msg in messages_raw:
         if msg.content.startswith("/jarjarclearmemory"):
