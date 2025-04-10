@@ -212,12 +212,13 @@ async def trigger_jarvis(message):
     messages = []
     if message and message.reference is not None:
         message_resolved = await message.channel.fetch_message(message.reference.message_id)
-        heure = message.reference.resolved.created_at
-        heure_montreal = heure.astimezone(pytz.timezone('America/Montreal'))
-        contenu = "SYSTEM : system : L'utilisateur en question fait référence au message suivant -> \"" \
-                  + message_resolved.content + "\" écrit par \"" \
-                  + message_resolved.author.name + "\" le " \
-                  + message_resolved.created_at.strftime("%d/%m/%Y à %H:%M:%S")
+        montreal_tz = pytz.timezone('America/Montreal')
+        montreal_time = message_resolved.created_at.astimezone(montreal_tz)
+        formatted_time = montreal_time.strftime("%d/%m/%Y à %H:%M:%S")
+        contenu = "INFORMATION SYSTEM : system : L'utilisateur en question fait référence au message suivant -> \"" \
+                  + message_resolved.content + "\" ECRIT PAR \"" \
+                  + message_resolved.author.name + "\" LE " \
+                  + formatted_time
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
 
@@ -234,15 +235,19 @@ async def trigger_jarvis(message):
         messages_to_process.append(msg)
 
     for msg in messages_to_process:
-        contenu = "SYSTEM_TIMESTAMP: " + msg.created_at.strftime("%d/%m/%Y %H:%M:%S") + " USER: " + msg.author.name + " CONTENT: " + msg.content
+        montreal_tz = pytz.timezone('America/Montreal')
+        montreal_time = msg.created_at.astimezone(montreal_tz)
+        formatted_time = montreal_time.strftime("%d/%m/%Y à %H:%M:%S")
+        contenu = "SYSTEM_TIMESTAMP: " + formatted_time + " USER: " + msg.author.name + " CONTENT: " + msg.content
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
 
         if msg.reference is not None:
             message_resolved = await msg.channel.fetch_message(msg.reference.message_id)
-            contenu = "SYSTEM : system : Le message SUIVANT est en réponse à ce message -> \"" \
-                      + message_resolved.content + "\" écrit par \"" \
-                      + message_resolved.author.name + "\""
+            contenu = "INFORMATION SYSTEM: system : Le message SUIVANT est en réponse à ce message -> \"" \
+                      + message_resolved.content + "\" ÉCRIT PAR \"" \
+                      + message_resolved.author.name + "\" LE " \
+                      + formatted_time
             contenu = contenu.replace("CEGEP-BOT", "Jarvis")
             messages.append(contenu + "\n")
     print(messages)
