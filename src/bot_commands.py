@@ -142,12 +142,12 @@ async def messages_formater(messages, system_prompt=None):
     messages_formated.append({"role": "system", "content": system_prompt})
     for message in messages:
         # Séparer le nom du message
-        utilisateur = message.split(" : ", maxsplit=2)[1]
+        utilisateur = message.split(": ", maxsplit=2)[1]
         if utilisateur.lower() == "cegep-bot":
-            message = message.split(" : ", maxsplit=2)[2]
+            message = message.split(": ", maxsplit=2)[2]
             messages_formated.append({"role": "assistant", "content": message})
         elif utilisateur.lower() == "system":
-            message = message.split(" : ", maxsplit=2)[2]
+            message = message.split(": ", maxsplit=2)[2]
             messages_formated.append({"role": "system", "content": message})
         else:
             messages_formated.append({"role": "user", "content": message})
