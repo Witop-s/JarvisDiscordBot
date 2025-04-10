@@ -243,8 +243,6 @@ async def trigger_jarvis(message):
                       + message_resolved.author.name + "\""
             contenu = contenu.replace("CEGEP-BOT", "Jarvis")
             messages.append(contenu + "\n")
-
-    messages = list(reversed(messages))
     print(messages)
 
     # Si le channel est le salon "id_salons_jarvis_testeur"
