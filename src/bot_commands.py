@@ -234,6 +234,7 @@ async def trigger_jarvis(message):
             break
         messages_to_process.append(msg)
 
+    messages_to_process = messages_to_process.reverse()
     for msg in messages_to_process:
         contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " a écrit : " + msg.content
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
