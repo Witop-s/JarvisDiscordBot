@@ -205,7 +205,7 @@ async def get_completion(messages, temperature=0.8, origine=None):
                 await channel.send(f"L'achievement {role.mention} a été découvert par {origine.author.mention} !")"""
     else:
         # Gérer les échecs ou les erreurs
-        await request_failure(response, reponse_content, origine);
+        await request_failure(response, reponse_content, origine)
 
 
 async def trigger_jarvis(message):
@@ -234,7 +234,7 @@ async def trigger_jarvis(message):
         messages_to_process.append(msg)
 
     for msg in messages_to_process:
-        contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " a écrit : " + msg.content
+        contenu = "SYSTEM_TIMESTAMP: " + msg.created_at.strftime("%d/%m/%Y %H:%M:%S") + " USER: " + msg.author.name + " CONTENT: " + msg.content
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
 
