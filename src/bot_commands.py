@@ -210,7 +210,7 @@ async def get_completion(messages, temperature=0.8, origine=None):
 
 async def trigger_jarvis(message):
     messages = []
-    if (message and message.reference is not None):
+    if message and message.reference is not None:
         message_resolved = await message.channel.fetch_message(message.reference.message_id)
         heure = message.reference.resolved.created_at
         heure_montreal = heure.astimezone(pytz.timezone('America/Montreal'))
@@ -221,15 +221,20 @@ async def trigger_jarvis(message):
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
         messages.append(contenu + "\n")
 
-    messages_temp = []
-    # Lire les messages du plus récent au plus ancien
+    messages_raw = []
+    messages = []
+
     async for msg in message.channel.history(limit=10):
+        messages_raw.append(msg)
+
+    messages_raw.reverse()
+    for msg in messages_raw:
         if msg.content.startswith("/jarjarclearmemory"):
             break
 
         contenu = msg.created_at.strftime("%d/%m/%Y à %H:%M:%S") + " " + msg.author.name + " a écrit : " + msg.content
         contenu = contenu.replace("CEGEP-BOT", "Jarvis")
-        messages_temp.append(contenu + "\n")
+        messages.append(contenu + "\n")
 
         if msg.reference is not None:
             message_resolved = await msg.channel.fetch_message(msg.reference.message_id)
@@ -237,10 +242,9 @@ async def trigger_jarvis(message):
                       + message_resolved.content + "\" écrit par \"" \
                       + message_resolved.author.name + "\""
             contenu = contenu.replace("CEGEP-BOT", "Jarvis")
-            messages_temp.append(contenu + "\n")
+            messages.append(contenu + "\n")
 
-    # Inverser pour avoir du plus ancien au plus récent
-    messages = list(reversed(messages_temp))
+    messages = list(reversed(messages))
     print(messages)
 
     # Si le channel est le salon "id_salons_jarvis_testeur"
